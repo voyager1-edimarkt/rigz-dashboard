@@ -936,10 +936,10 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
   const poData = poContent?.pos?.[0] || null;
   const invoiceData = invoiceContent?.invoices?.[0] || null;
 
-  const customerInfo = contentOrder?.customer || invoiceData?.customer || null;
-  const shippingInfo = contentOrder?.shipping || null;
-  const billingInfo = contentOrder?.billing || null;
-  const contentLines = contentOrder?.lines || [];
+  const customerInfo = contentOrder?.customer || content?.customer || invoiceData?.customer || null;
+  const shippingInfo = contentOrder?.shipping || content?.shipTo || null;
+  const billingInfo = contentOrder?.billing || content?.billTo || null;
+  const contentLines = contentOrder?.lines || content?.items || [];
   const poLines = poData?.items || [];
   const invoiceLines = invoiceData?.lines || [];
 
