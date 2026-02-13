@@ -175,6 +175,8 @@ export interface ProductFilters {
   vendor?: string;
   location?: string;
   active?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface PurchaseOrderRow {
@@ -227,6 +229,8 @@ export interface PurchaseOrderFilters {
   search?: string;
   status?: string;
   vendor?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface SupplierRow {
@@ -255,6 +259,8 @@ export interface SupplierFilters {
   limit: number;
   offset: number;
   search?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface VendorRow {
@@ -298,6 +304,8 @@ export interface VendorFilters {
   search?: string;
   status?: string;
   state?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface WarehouseRow {
@@ -318,6 +326,8 @@ export interface CustomerFilters {
   search?: string;
   status?: string;
   state?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface OrderFilters {
@@ -325,6 +335,8 @@ export interface OrderFilters {
   offset: number;
   search?: string;
   status?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface TableDataResult {
@@ -371,6 +383,8 @@ export interface ErrorFilters {
   search?: string;
   type?: string;
   channelName?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface SalesInsights {
