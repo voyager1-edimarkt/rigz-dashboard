@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode } from "lucide-react";
 import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import {
   ComposableMap,
   Geographies,
@@ -106,6 +107,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: stats, isLoading: statsLoading } = useQuery<CustomerStats>({
     queryKey: ["/api/customers/stats"],
   });
@@ -202,7 +204,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <Card data-testid="card-total-units-sold">
+        <Card data-testid="card-total-units-sold" className="cursor-pointer hover-elevate" onClick={() => navigate("/products")}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-9 h-9 rounded-md bg-red-500/15">
@@ -220,7 +222,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-total-revenue">
+        <Card data-testid="card-total-revenue" className="cursor-pointer hover-elevate" onClick={() => navigate("/orders")}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-9 h-9 rounded-md bg-emerald-500/15">
@@ -240,7 +242,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-unique-skus">
+        <Card data-testid="card-unique-skus" className="cursor-pointer hover-elevate" onClick={() => navigate("/products")}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-9 h-9 rounded-md bg-blue-500/15">
@@ -258,7 +260,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-orders-with-sales">
+        <Card data-testid="card-orders-with-sales" className="cursor-pointer hover-elevate" onClick={() => navigate("/orders")}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-9 h-9 rounded-md bg-amber-500/15">
@@ -370,7 +372,7 @@ export default function Dashboard() {
                         </div>
                       );
                     }} />
-                    <Bar dataKey="units" fill="#dc2626" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="units" fill="#dc2626" radius={[4, 4, 0, 0]} className="cursor-pointer" onClick={() => navigate("/orders")} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
