@@ -221,11 +221,22 @@ export class MySQLStorage implements IStorage {
     return { rows: rows as any[], total };
   }
 
-  async getOrderStats(): Promise<OrderStats> {
+  async getOrderStats(dateFrom?: string, dateTo?: string): Promise<OrderStats> {
+    let dateWhere = "";
+    const dateParams: any[] = [];
+    if (dateFrom) {
+      dateWhere += " AND orderDate >= ?";
+      dateParams.push(dateFrom);
+    }
+    if (dateTo) {
+      dateWhere += " AND orderDate <= ?";
+      dateParams.push(dateTo + " 23:59:59");
+    }
+
     const [totalResult, statusResult, recentByDay] = await Promise.all([
-      queryNoDb("SELECT COUNT(*) as total FROM runtime.orders"),
-      queryNoDb("SELECT status, COUNT(*) as cnt FROM runtime.orders GROUP BY status ORDER BY cnt DESC"),
-      queryNoDb("SELECT DATE(orderDate) as day, COUNT(*) as cnt FROM runtime.orders WHERE orderDate >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY DATE(orderDate) ORDER BY day DESC LIMIT 30"),
+      queryNoDb(`SELECT COUNT(*) as total FROM runtime.orders WHERE 1=1${dateWhere}`, dateParams),
+      queryNoDb(`SELECT status, COUNT(*) as cnt FROM runtime.orders WHERE 1=1${dateWhere} GROUP BY status ORDER BY cnt DESC`, dateParams),
+      queryNoDb(`SELECT DATE(orderDate) as day, COUNT(*) as cnt FROM runtime.orders WHERE orderDate >= DATE_SUB(NOW(), INTERVAL 30 DAY)${dateWhere} GROUP BY DATE(orderDate) ORDER BY day DESC LIMIT 30`, dateParams),
     ]);
 
     return {
@@ -579,13 +590,24 @@ export class MySQLStorage implements IStorage {
     return { rows: rows as any[], total };
   }
 
-  async getErrorStats(): Promise<ErrorStats> {
+  async getErrorStats(dateFrom?: string, dateTo?: string): Promise<ErrorStats> {
+    let dateWhere = "";
+    const dateParams: any[] = [];
+    if (dateFrom) {
+      dateWhere += " AND date >= ?";
+      dateParams.push(dateFrom);
+    }
+    if (dateTo) {
+      dateWhere += " AND date <= ?";
+      dateParams.push(dateTo + " 23:59:59");
+    }
+
     const [totalResult, typeResult, channelResult, vendorResult, recentResult] = await Promise.all([
-      queryNoDb("SELECT COUNT(*) as total FROM runtime.errors"),
-      queryNoDb("SELECT type, COUNT(*) as cnt FROM runtime.errors WHERE type IS NOT NULL GROUP BY type ORDER BY cnt DESC"),
-      queryNoDb("SELECT channelName, COUNT(*) as cnt FROM runtime.errors WHERE channelName IS NOT NULL GROUP BY channelName ORDER BY cnt DESC"),
-      queryNoDb("SELECT vendor, COUNT(*) as cnt FROM runtime.errors WHERE vendor IS NOT NULL GROUP BY vendor ORDER BY cnt DESC"),
-      queryNoDb("SELECT DATE(date) as day, COUNT(*) as cnt FROM runtime.errors GROUP BY DATE(date) ORDER BY day DESC LIMIT 30"),
+      queryNoDb(`SELECT COUNT(*) as total FROM runtime.errors WHERE 1=1${dateWhere}`, dateParams),
+      queryNoDb(`SELECT type, COUNT(*) as cnt FROM runtime.errors WHERE type IS NOT NULL${dateWhere} GROUP BY type ORDER BY cnt DESC`, dateParams),
+      queryNoDb(`SELECT channelName, COUNT(*) as cnt FROM runtime.errors WHERE channelName IS NOT NULL${dateWhere} GROUP BY channelName ORDER BY cnt DESC`, dateParams),
+      queryNoDb(`SELECT vendor, COUNT(*) as cnt FROM runtime.errors WHERE vendor IS NOT NULL${dateWhere} GROUP BY vendor ORDER BY cnt DESC`, dateParams),
+      queryNoDb(`SELECT DATE(date) as day, COUNT(*) as cnt FROM runtime.errors WHERE 1=1${dateWhere} GROUP BY DATE(date) ORDER BY day DESC LIMIT 30`, dateParams),
     ]);
 
     return {

@@ -111,9 +111,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/orders/stats", async (_req, res) => {
+  app.get("/api/orders/stats", async (req, res) => {
     try {
-      const stats = await storage.getOrderStats();
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const stats = await storage.getOrderStats(dateFrom, dateTo);
       res.json(stats);
     } catch (err: any) {
       log(`Error fetching order stats: ${err.message}`, "mysql");
@@ -315,9 +317,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/errors/stats", async (_req, res) => {
+  app.get("/api/errors/stats", async (req, res) => {
     try {
-      const stats = await storage.getErrorStats();
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const stats = await storage.getErrorStats(dateFrom, dateTo);
       res.json(stats);
     } catch (err: any) {
       log(`Error fetching error stats: ${err.message}`, "mysql");

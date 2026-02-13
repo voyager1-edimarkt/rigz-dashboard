@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -108,12 +109,20 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
+  const [pipelineDateFrom, setPipelineDateFrom] = useState("");
+  const [pipelineDateTo, setPipelineDateTo] = useState("");
+
   const { data: stats, isLoading: statsLoading } = useQuery<CustomerStats>({
     queryKey: ["/api/customers/stats"],
   });
 
+  const orderStatsParams = new URLSearchParams();
+  if (pipelineDateFrom) orderStatsParams.set("dateFrom", pipelineDateFrom);
+  if (pipelineDateTo) orderStatsParams.set("dateTo", pipelineDateTo);
+  const orderStatsUrl = `/api/orders/stats${orderStatsParams.toString() ? `?${orderStatsParams}` : ""}`;
+
   const { data: orderStats, isLoading: orderStatsLoading } = useQuery<OrderStats>({
-    queryKey: ["/api/orders/stats"],
+    queryKey: [orderStatsUrl],
   });
 
   const { data: poStats, isLoading: poStatsLoading } = useQuery<PurchaseOrderStats>({
@@ -124,8 +133,13 @@ export default function Dashboard() {
     queryKey: ["/api/sales/insights"],
   });
 
+  const errorStatsParams = new URLSearchParams();
+  if (pipelineDateFrom) errorStatsParams.set("dateFrom", pipelineDateFrom);
+  if (pipelineDateTo) errorStatsParams.set("dateTo", pipelineDateTo);
+  const errorStatsUrl = `/api/errors/stats${errorStatsParams.toString() ? `?${errorStatsParams}` : ""}`;
+
   const { data: errorStats, isLoading: errorStatsLoading } = useQuery<{ total: number; byType: { type: string; cnt: number }[] }>({
-    queryKey: ["/api/errors/stats"],
+    queryKey: [errorStatsUrl],
   });
 
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
@@ -284,12 +298,32 @@ export default function Dashboard() {
       </div>
 
       <Card className="mb-4" data-testid="card-order-pipeline">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Truck className="w-4 h-4 text-muted-foreground" />
             <CardTitle className="text-sm">Order Pipeline</CardTitle>
           </div>
-          <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                type="date"
+                value={pipelineDateFrom}
+                onChange={(e) => setPipelineDateFrom(e.target.value)}
+                className="w-[130px] h-8 text-xs"
+                data-testid="input-pipeline-date-from"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={pipelineDateTo}
+                onChange={(e) => setPipelineDateTo(e.target.value)}
+                className="w-[130px] h-8 text-xs"
+                data-testid="input-pipeline-date-to"
+              />
+            </div>
+            <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           {orderStatsLoading || errorStatsLoading ? (

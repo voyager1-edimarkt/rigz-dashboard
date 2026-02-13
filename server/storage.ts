@@ -49,7 +49,7 @@ export interface IStorage {
   getCustomers(filters: CustomerFilters): Promise<CustomerListResult>;
   getCustomerStats(): Promise<CustomerStats>;
   getOrders(filters: OrderFilters): Promise<OrderListResult>;
-  getOrderStats(): Promise<OrderStats>;
+  getOrderStats(dateFrom?: string, dateTo?: string): Promise<OrderStats>;
   getOrderById(id: number): Promise<OrderDetail | null>;
   getOrderHistory(orderId: number): Promise<OrderDataRow[]>;
   getProducts(filters: ProductFilters): Promise<ProductListResult>;
@@ -66,7 +66,7 @@ export interface IStorage {
   getVendorByName(name: string): Promise<VendorRow | null>;
   getWarehouses(): Promise<WarehouseListResult>;
   getErrors(filters: ErrorFilters): Promise<ErrorListResult>;
-  getErrorStats(): Promise<ErrorStats>;
+  getErrorStats(dateFrom?: string, dateTo?: string): Promise<ErrorStats>;
   getErrorById(id: number): Promise<ErrorRow | null>;
   getSalesInsights(): Promise<SalesInsights>;
   getInventory(filters: InventoryFilters): Promise<InventoryListResult>;
