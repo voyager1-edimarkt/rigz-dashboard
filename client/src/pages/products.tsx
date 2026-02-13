@@ -256,6 +256,8 @@ export default function Products() {
   const [vendorFilter, setVendorFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<ProductRow | null>(null);
   const limit = 25;
 
@@ -271,6 +273,8 @@ export default function Products() {
   if (vendorFilter) queryParams.set("vendor", vendorFilter);
   if (locationFilter) queryParams.set("location", locationFilter);
   if (activeFilter) queryParams.set("active", activeFilter);
+  if (dateFrom) queryParams.set("dateFrom", dateFrom);
+  if (dateTo) queryParams.set("dateTo", dateTo);
 
   const productsUrl = `/api/products?${queryParams.toString()}`;
 
@@ -480,6 +484,20 @@ export default function Products() {
                 </SelectContent>
               </Select>
             )}
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-from"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-to"
+            />
             <Button variant="outline" size="sm" onClick={handleSearch} data-testid="button-search-products">
               <Search className="w-3.5 h-3.5 mr-1.5" />
               Search

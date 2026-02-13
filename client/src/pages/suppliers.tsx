@@ -147,6 +147,8 @@ export default function Suppliers() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierRow | null>(null);
   const limit = 25;
 
@@ -158,6 +160,8 @@ export default function Suppliers() {
   queryParams.set("limit", String(limit));
   queryParams.set("offset", String(page * limit));
   if (search) queryParams.set("search", search);
+  if (dateFrom) queryParams.set("dateFrom", dateFrom);
+  if (dateTo) queryParams.set("dateTo", dateTo);
 
   const suppliersUrl = `/api/suppliers?${queryParams.toString()}`;
 
@@ -327,6 +331,20 @@ export default function Suppliers() {
                 data-testid="input-search"
               />
             </div>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-from"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-to"
+            />
             <Button variant="outline" onClick={handleSearch} data-testid="button-search">
               <Search className="w-3.5 h-3.5 mr-1.5" />
               Search

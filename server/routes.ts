@@ -74,6 +74,8 @@ export async function registerRoutes(
         search: (req.query.search as string) || undefined,
         status: (req.query.status as string) || undefined,
         state: (req.query.state as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -99,6 +101,8 @@ export async function registerRoutes(
         offset: Number(req.query.offset) || 0,
         search: (req.query.search as string) || undefined,
         status: (req.query.status as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -150,6 +154,8 @@ export async function registerRoutes(
         vendor: (req.query.vendor as string) || undefined,
         location: (req.query.location as string) || undefined,
         active: (req.query.active as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -176,6 +182,8 @@ export async function registerRoutes(
         search: (req.query.search as string) || undefined,
         status: (req.query.status as string) || undefined,
         vendor: (req.query.vendor as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -223,6 +231,8 @@ export async function registerRoutes(
         limit: Math.min(Number(req.query.limit) || 25, 100),
         offset: Number(req.query.offset) || 0,
         search: (req.query.search as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -262,6 +272,8 @@ export async function registerRoutes(
         search: (req.query.search as string) || undefined,
         status: (req.query.status as string) || undefined,
         state: (req.query.state as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {
@@ -334,6 +346,8 @@ export async function registerRoutes(
         search: (req.query.search as string) || undefined,
         type: (req.query.type as string) || undefined,
         channelName: (req.query.channelName as string) || undefined,
+        dateFrom: (req.query.dateFrom as string) || undefined,
+        dateTo: (req.query.dateTo as string) || undefined,
       });
       res.json(result);
     } catch (err: any) {

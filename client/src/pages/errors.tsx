@@ -213,6 +213,8 @@ export default function Errors() {
   const [searchInput, setSearchInput] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedError, setSelectedError] = useState<ErrorRow | null>(null);
   const limit = 25;
 
@@ -226,6 +228,8 @@ export default function Errors() {
   if (search) queryParams.set("search", search);
   if (typeFilter) queryParams.set("type", typeFilter);
   if (channelFilter) queryParams.set("channelName", channelFilter);
+  if (dateFrom) queryParams.set("dateFrom", dateFrom);
+  if (dateTo) queryParams.set("dateTo", dateTo);
 
   const errorsUrl = `/api/errors?${queryParams.toString()}`;
 
@@ -373,6 +377,20 @@ export default function Errors() {
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-from"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-to"
+            />
             <Button variant="outline" onClick={handleSearch} data-testid="button-search">
               <Search className="w-3.5 h-3.5 mr-1.5" />
               Search

@@ -1720,6 +1720,8 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [, navigate] = useLocation();
   const limit = 25;
 
@@ -1728,6 +1730,8 @@ export default function Orders() {
   queryParams.set("offset", String(page * limit));
   if (search) queryParams.set("search", search);
   if (statusFilter) queryParams.set("status", statusFilter);
+  if (dateFrom) queryParams.set("dateFrom", dateFrom);
+  if (dateTo) queryParams.set("dateTo", dateTo);
 
   const ordersUrl = `/api/orders?${queryParams.toString()}`;
 
@@ -1827,6 +1831,20 @@ export default function Orders() {
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                className="w-[140px]"
+                data-testid="input-date-from"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                className="w-[140px]"
+                data-testid="input-date-to"
+              />
               <Button variant="outline" onClick={handleSearch} data-testid="button-search-orders">
                 <Search className="w-3.5 h-3.5 mr-1.5" />
                 Search

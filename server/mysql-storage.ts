@@ -132,6 +132,14 @@ export class MySQLStorage implements IStorage {
       where += " AND c.state = ?";
       params.push(filters.state);
     }
+    if (filters.dateFrom) {
+      where += " AND c.createdAt >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND c.createdAt <= ?";
+      params.push(filters.dateTo + " 23:59:59");
+    }
 
     const countResult = await queryNoDb(
       `SELECT COUNT(*) as total FROM runtime.customers c ${where}`,
@@ -183,6 +191,14 @@ export class MySQLStorage implements IStorage {
     if (filters.status) {
       where += " AND o.status = ?";
       params.push(filters.status);
+    }
+    if (filters.dateFrom) {
+      where += " AND o.orderDate >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND o.orderDate <= ?";
+      params.push(filters.dateTo + " 23:59:59");
     }
 
     const countResult = await queryNoDb(
@@ -259,6 +275,14 @@ export class MySQLStorage implements IStorage {
     } else if (filters.active === "0") {
       where += " AND p.active = 0";
     }
+    if (filters.dateFrom) {
+      where += " AND p.createdAt >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND p.createdAt <= ?";
+      params.push(filters.dateTo + " 23:59:59");
+    }
 
     const countResult = await queryNoDb(
       `SELECT COUNT(*) as total FROM runtime.products p ${where}`,
@@ -317,6 +341,14 @@ export class MySQLStorage implements IStorage {
     if (filters.vendor) {
       where += " AND po.vendor = ?";
       params.push(filters.vendor);
+    }
+    if (filters.dateFrom) {
+      where += " AND po.orderDate >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND po.orderDate <= ?";
+      params.push(filters.dateTo + " 23:59:59");
     }
 
     const countResult = await queryNoDb(
@@ -378,6 +410,14 @@ export class MySQLStorage implements IStorage {
       const s = `%${filters.search}%`;
       params.push(s, s);
     }
+    if (filters.dateFrom) {
+      where += " AND createdAt >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND createdAt <= ?";
+      params.push(filters.dateTo + " 23:59:59");
+    }
 
     const countResult = await queryNoDb(
       `SELECT COUNT(*) as total FROM runtime.suppliers ${where}`,
@@ -433,6 +473,14 @@ export class MySQLStorage implements IStorage {
     if (filters.state) {
       where += " AND state = ?";
       params.push(filters.state);
+    }
+    if (filters.dateFrom) {
+      where += " AND createdAt >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND createdAt <= ?";
+      params.push(filters.dateTo + " 23:59:59");
     }
 
     const countResult = await queryNoDb(
@@ -504,6 +552,14 @@ export class MySQLStorage implements IStorage {
     if (filters.channelName) {
       where += " AND channelName = ?";
       params.push(filters.channelName);
+    }
+    if (filters.dateFrom) {
+      where += " AND date >= ?";
+      params.push(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      where += " AND date <= ?";
+      params.push(filters.dateTo + " 23:59:59");
     }
 
     const countResult = await queryNoDb(

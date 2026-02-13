@@ -182,6 +182,8 @@ export default function Vendors() {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [stateFilter, setStateFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<VendorRow | null>(null);
   const limit = 25;
 
@@ -195,6 +197,8 @@ export default function Vendors() {
   if (search) queryParams.set("search", search);
   if (statusFilter) queryParams.set("status", statusFilter);
   if (stateFilter) queryParams.set("state", stateFilter);
+  if (dateFrom) queryParams.set("dateFrom", dateFrom);
+  if (dateTo) queryParams.set("dateTo", dateTo);
 
   const vendorsUrl = `/api/vendors?${queryParams.toString()}`;
 
@@ -380,6 +384,20 @@ export default function Vendors() {
                   ))}
               </SelectContent>
             </Select>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-from"
+            />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+              className="w-[140px]"
+              data-testid="input-date-to"
+            />
             <Button variant="outline" onClick={handleSearch} data-testid="button-search">
               <Search className="w-3.5 h-3.5 mr-1.5" />
               Search
