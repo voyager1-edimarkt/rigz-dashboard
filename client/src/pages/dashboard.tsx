@@ -382,42 +382,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-3 mt-8 mb-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
-          <ClipboardList className="w-5 h-5 text-red-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold" data-testid="text-po-section-title">Purchase Orders</h2>
-          <p className="text-sm text-muted-foreground">Overview of purchase order activity</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        {poStatsLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}><CardContent className="pt-4"><Skeleton className="h-12 w-full" /></CardContent></Card>
-          ))
-        ) : (
-          <>
-            <Card data-testid="card-po-total">
-              <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground mb-1">Total POs</p>
-                <p className="text-2xl font-bold" data-testid="text-po-total">{poStats?.total.toLocaleString() ?? 0}</p>
-              </CardContent>
-            </Card>
-            {poStatusData.slice(0, 3).map((s) => (
-              <Card key={s.status} data-testid={`card-po-status-${s.status}`}>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground mb-1 capitalize">{s.status}</p>
-                  <p className="text-2xl font-bold">{s.cnt.toLocaleString()}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-4">
         <Card data-testid="card-po-by-status">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
             <CardTitle className="text-sm">POs by Status</CardTitle>
