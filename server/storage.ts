@@ -14,6 +14,11 @@ import type {
   ProductListResult,
   ProductStats,
   ProductFilters,
+  PurchaseOrderListResult,
+  PurchaseOrderStats,
+  PurchaseOrderDetail,
+  PurchaseOrderDataRow,
+  PurchaseOrderFilters,
   TableDataResult,
 } from "@shared/schema";
 
@@ -31,5 +36,9 @@ export interface IStorage {
   getOrderHistory(orderId: number): Promise<OrderDataRow[]>;
   getProducts(filters: ProductFilters): Promise<ProductListResult>;
   getProductStats(): Promise<ProductStats>;
+  getPurchaseOrders(filters: PurchaseOrderFilters): Promise<PurchaseOrderListResult>;
+  getPurchaseOrderStats(): Promise<PurchaseOrderStats>;
+  getPurchaseOrderById(id: number): Promise<PurchaseOrderDetail | null>;
+  getPurchaseOrderHistory(poId: number): Promise<PurchaseOrderDataRow[]>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

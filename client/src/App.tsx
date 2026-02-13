@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
 import Orders, { OrderDetailPage } from "@/pages/orders";
 import Products from "@/pages/products";
+import PurchaseOrders, { PurchaseOrderDetailPage } from "@/pages/purchase-orders";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import NotFound from "@/pages/not-found";
@@ -59,6 +60,14 @@ function AppContent() {
               </Route>
               <Route path="/products">
                 <Products />
+              </Route>
+              <Route path="/purchase-orders">
+                <PurchaseOrders />
+              </Route>
+              <Route path="/purchase-orders/:id">
+                {(params: { id: string }) => (
+                  <PurchaseOrderDetailPage poId={Number(params.id)} />
+                )}
               </Route>
               <Route path="/orders/:id">
                 {(params: { id: string }) => (

@@ -14,6 +14,11 @@ import type {
   ProductListResult,
   ProductStats,
   ProductFilters,
+  PurchaseOrderListResult,
+  PurchaseOrderStats,
+  PurchaseOrderDetail,
+  PurchaseOrderDataRow,
+  PurchaseOrderFilters,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -279,6 +284,74 @@ export class MySQLStorage implements IStorage {
       byVendor: vendorResult as any[],
       byLocation: locationResult as any[],
     };
+  }
+
+  async getPurchaseOrders(filters: PurchaseOrderFilters): Promise<PurchaseOrderListResult> {
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (filters.search) {
+      where += " AND (po.poNumber LIKE ? OR po.vendor LIKE ? OR po.crmId LIKE ?)";
+      const s = `%${filters.search}%`;
+      params.push(s, s, s);
+    }
+    if (filters.status) {
+      where += " AND po.status = ?";
+      params.push(filters.status);
+    }
+    if (filters.vendor) {
+      where += " AND po.vendor = ?";
+      params.push(filters.vendor);
+    }
+
+    const countResult = await queryNoDb(
+      `SELECT COUNT(*) as total FROM runtime.purchase_orders po ${where}`,
+      params
+    );
+    const total = Number((countResult as any[])[0]?.total ?? 0);
+
+    const rows = await queryNoDb(
+      `SELECT po.id, po.vendor, po.\`index\`, po.poNumber, po.orderDate, po.crmId, po.status, po.statusMessage, po.createdAt, po.updatedAt
+       FROM runtime.purchase_orders po ${where}
+       ORDER BY po.createdAt DESC
+       LIMIT ${filters.limit} OFFSET ${filters.offset}`,
+      params
+    );
+
+    return { rows: rows as any[], total };
+  }
+
+  async getPurchaseOrderStats(): Promise<PurchaseOrderStats> {
+    const [totalResult, statusResult, vendorResult, recentByDay] = await Promise.all([
+      queryNoDb("SELECT COUNT(*) as total FROM runtime.purchase_orders"),
+      queryNoDb("SELECT status, COUNT(*) as cnt FROM runtime.purchase_orders GROUP BY status ORDER BY cnt DESC"),
+      queryNoDb("SELECT vendor, COUNT(*) as cnt FROM runtime.purchase_orders GROUP BY vendor ORDER BY cnt DESC LIMIT 10"),
+      queryNoDb("SELECT DATE(orderDate) as day, COUNT(*) as cnt FROM runtime.purchase_orders WHERE orderDate IS NOT NULL GROUP BY DATE(orderDate) ORDER BY day DESC LIMIT 30"),
+    ]);
+
+    return {
+      total: Number((totalResult as any[])[0]?.total ?? 0),
+      byStatus: statusResult as any[],
+      byVendor: vendorResult as any[],
+      recentByDay: recentByDay as any[],
+    };
+  }
+
+  async getPurchaseOrderById(id: number): Promise<PurchaseOrderDetail | null> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.purchase_orders WHERE id = ?`,
+      [id]
+    );
+    const po = (rows as any[])[0];
+    return po || null;
+  }
+
+  async getPurchaseOrderHistory(poId: number): Promise<PurchaseOrderDataRow[]> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.purchase_order_data WHERE purchaseOrderId = ? ORDER BY date ASC`,
+      [poId]
+    );
+    return rows as any[];
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {

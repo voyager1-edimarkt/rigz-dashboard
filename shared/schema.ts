@@ -177,6 +177,58 @@ export interface ProductFilters {
   active?: string;
 }
 
+export interface PurchaseOrderRow {
+  id: number;
+  vendor: string;
+  index: number;
+  poNumber: string;
+  orderDate: string | null;
+  crmId: string | null;
+  status: string;
+  statusMessage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PurchaseOrderDetail extends PurchaseOrderRow {
+  content: string;
+  invoiceContent: string | null;
+}
+
+export interface PurchaseOrderListResult {
+  rows: PurchaseOrderRow[];
+  total: number;
+}
+
+export interface PurchaseOrderStats {
+  total: number;
+  byStatus: { status: string; cnt: number }[];
+  byVendor: { vendor: string; cnt: number }[];
+  recentByDay: { day: string; cnt: number }[];
+}
+
+export interface PurchaseOrderDataRow {
+  id: number;
+  purchaseOrderId: number;
+  date: string | null;
+  initialStatus: string | null;
+  newStatus: string | null;
+  inboundContent: string | null;
+  inboundIdentifier: string | null;
+  inboundType: string | null;
+  outboundContent: string | null;
+  outboundIdentifier: string | null;
+  outboundType: string | null;
+}
+
+export interface PurchaseOrderFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+  status?: string;
+  vendor?: string;
+}
+
 export interface CustomerFilters {
   limit: number;
   offset: number;

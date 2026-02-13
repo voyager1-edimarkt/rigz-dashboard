@@ -168,6 +168,55 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/purchase-orders", async (req, res) => {
+    try {
+      const result = await storage.getPurchaseOrders({
+        limit: Math.min(Number(req.query.limit) || 25, 100),
+        offset: Number(req.query.offset) || 0,
+        search: (req.query.search as string) || undefined,
+        status: (req.query.status as string) || undefined,
+        vendor: (req.query.vendor as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching purchase orders: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/purchase-orders/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getPurchaseOrderStats();
+      res.json(stats);
+    } catch (err: any) {
+      log(`Error fetching purchase order stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      const po = await storage.getPurchaseOrderById(Number(req.params.id));
+      if (!po) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(po);
+    } catch (err: any) {
+      log(`Error fetching purchase order detail: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/purchase-orders/:id/history", async (req, res) => {
+    try {
+      const history = await storage.getPurchaseOrderHistory(Number(req.params.id));
+      res.json(history);
+    } catch (err: any) {
+      log(`Error fetching purchase order history: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);
