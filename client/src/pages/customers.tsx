@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -115,6 +115,10 @@ function getAvatarColor(name: string): string {
   return avatarColors[Math.abs(hash) % avatarColors.length];
 }
 
+function getDiceBearUrl(seed: string, size = 80): string {
+  return `https://api.dicebear.com/9.x/open-peeps/svg?seed=${encodeURIComponent(seed)}&size=${size}`;
+}
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
@@ -149,7 +153,8 @@ function CustomerDetailSheet({ customer, open, onClose }: { customer: CustomerRo
       <SheetContent className="overflow-y-auto sm:max-w-md" data-testid="sheet-customer-detail">
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <Avatar className="w-12 h-12">
+            <Avatar className="w-14 h-14">
+              <AvatarImage src={getDiceBearUrl(customer.name, 128)} alt={displayName} />
               <AvatarFallback className={`text-base font-semibold ${getAvatarColor(customer.name)}`}>
                 {getInitials(displayName)}
               </AvatarFallback>
@@ -549,6 +554,7 @@ export default function Customers() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="w-8 h-8">
+                          <AvatarImage src={getDiceBearUrl(row.name)} alt={row.companyName || row.name} />
                           <AvatarFallback className={`text-[10px] font-semibold ${getAvatarColor(row.name)}`}>
                             {getInitials(row.companyName || row.name)}
                           </AvatarFallback>
