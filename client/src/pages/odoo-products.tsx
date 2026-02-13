@@ -23,8 +23,6 @@ interface OdooProduct {
   type: string;
   categ_id: [number, string] | false;
   active: boolean;
-  qty_available: number;
-  virtual_available: number;
   create_date: string;
   write_date: string;
 }
@@ -117,8 +115,6 @@ export default function OdooProducts() {
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Sale Price</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">On Hand</TableHead>
-                    <TableHead className="text-right">Forecast</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -141,8 +137,6 @@ export default function OdooProducts() {
                       <TableCell className="text-right font-mono">
                         ${p.standard_price.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right">{p.qty_available}</TableCell>
-                      <TableCell className="text-right">{p.virtual_available}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs capitalize">
                           {p.type === "consu" ? "consumable" : p.type === "service" ? "service" : p.type}

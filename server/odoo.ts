@@ -35,25 +35,33 @@ export class OdooClient {
   }
 
   private async jsonRpc(payload: any): Promise<JsonRpcResponse> {
-    const response = await fetch(this.config.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    try {
+      const response = await fetch(this.config.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json() as JsonRpcResponse;
+
+      if (data.error) {
+        throw new Error(
+          `Odoo error: ${data.error.data?.message || data.error.message}`
+        );
+      }
+
+      return data;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = await response.json() as JsonRpcResponse;
-
-    if (data.error) {
-      throw new Error(
-        `Odoo error: ${data.error.data?.message || data.error.message}`
-      );
-    }
-
-    return data;
   }
 
   async authenticate(): Promise<number> {
@@ -120,13 +128,44 @@ export class OdooClient {
     limit?: number,
     order?: string
   ): Promise<any[]> {
+    await this.authenticate();
+
     const kwargs: Record<string, any> = {};
     if (fields.length > 0) kwargs.fields = fields;
     if (offset !== undefined) kwargs.offset = offset;
     if (limit !== undefined) kwargs.limit = limit;
     if (order) kwargs.order = order;
 
-    return this.executeKw(model, "search_read", [filters], kwargs);
+    const resp = await this.jsonRpc({
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.config.db,
+          this.uid,
+          this.config.password,
+          model,
+          "search_read",
+          [filters],
+        ],
+        kwargs: kwargs,
+        id: Date.now(),
+      },
+    });
+
+    const records = resp.result || [];
+    if (fields.length > 0) {
+      return records.map((r: any) => {
+        const filtered: any = { id: r.id };
+        for (const f of fields) {
+          if (f in r) filtered[f] = r[f];
+        }
+        return filtered;
+      });
+    }
+    return records;
   }
 
   async searchCount(model: string, filters: any[] = []): Promise<number> {
@@ -177,10 +216,8 @@ export class OdooClient {
       "currency_id", "create_date", "write_date",
     ];
 
-    const [records, total] = await Promise.all([
-      this.searchRead("sale.order", filters, fields, offset, limit, order),
-      this.searchCount("sale.order", filters),
-    ]);
+    const records = await this.searchRead("sale.order", filters, fields, offset, limit, order);
+    const total = await this.searchCount("sale.order", filters);
 
     return { records, total };
   }
@@ -197,10 +234,8 @@ export class OdooClient {
       "order_line", "currency_id", "create_date", "write_date",
     ];
 
-    const [records, total] = await Promise.all([
-      this.searchRead("purchase.order", filters, fields, offset, limit, order),
-      this.searchCount("purchase.order", filters),
-    ]);
+    const records = await this.searchRead("purchase.order", filters, fields, offset, limit, order);
+    const total = await this.searchCount("purchase.order", filters);
 
     return { records, total };
   }
@@ -214,14 +249,11 @@ export class OdooClient {
     const fields = [
       "name", "default_code", "description", "list_price",
       "standard_price", "type", "categ_id", "active",
-      "qty_available", "virtual_available",
       "create_date", "write_date",
     ];
 
-    const [records, total] = await Promise.all([
-      this.searchRead("product.template", filters, fields, offset, limit, order),
-      this.searchCount("product.template", filters),
-    ]);
+    const records = await this.searchRead("product.template", filters, fields, offset, limit, order);
+    const total = await this.searchCount("product.template", filters);
 
     return { records, total };
   }
@@ -239,10 +271,8 @@ export class OdooClient {
       "create_date", "write_date",
     ];
 
-    const [records, total] = await Promise.all([
-      this.searchRead("res.partner", filters, fields, offset, limit, order),
-      this.searchCount("res.partner", filters),
-    ]);
+    const records = await this.searchRead("res.partner", filters, fields, offset, limit, order);
+    const total = await this.searchCount("res.partner", filters);
 
     return { records, total };
   }
