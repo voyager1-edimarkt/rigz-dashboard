@@ -202,6 +202,14 @@ export class MySQLStorage implements IStorage {
     return order || null;
   }
 
+  async getOrderHistory(orderId: number): Promise<any[]> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.order_data WHERE orderId = ? ORDER BY date ASC`,
+      [orderId]
+    );
+    return rows as any[];
+  }
+
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {
     const startTime = Date.now();
     const rows = await query(sql, undefined, database);

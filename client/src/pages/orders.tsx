@@ -48,6 +48,8 @@ import {
   ClipboardList,
   User,
   Building2,
+  History,
+  ArrowRight,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -239,11 +241,145 @@ function CapsuleTabs({ tabs, active, onChange }: { tabs: TabDef[]; active: strin
   );
 }
 
+interface OrderDataRow {
+  id: number;
+  orderId: number;
+  date: string | null;
+  initialStatus: string | null;
+  newStatus: string | null;
+  inboundContent: string | null;
+  inboundIdentifier: string | null;
+  inboundType: string | null;
+  outboundContent: string | null;
+  outboundIdentifier: string | null;
+  outboundType: string | null;
+}
+
+function OrderHistoryTimeline({ orderId }: { orderId: number }) {
+  const { data: history, isLoading } = useQuery<OrderDataRow[]>({
+    queryKey: ['/api/orders', orderId, 'history'],
+    enabled: !!orderId,
+  });
+
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 gap-2">
+        <History className="w-8 h-8 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">No history records found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3" data-testid="order-history-timeline">
+      {history.map((entry, idx) => {
+        const isExpanded = expandedRow === entry.id;
+        const initialCfg = entry.initialStatus ? getStatusConfig(entry.initialStatus) : null;
+        const newCfg = entry.newStatus ? getStatusConfig(entry.newStatus) : null;
+        const InitialIcon = initialCfg?.icon || AlertCircle;
+        const NewIcon = newCfg?.icon || AlertCircle;
+
+        const inbound = safeParseJson(entry.inboundContent);
+        const outbound = safeParseJson(entry.outboundContent);
+        const hasInbound = !!entry.inboundContent && entry.inboundContent !== "";
+        const hasOutbound = !!entry.outboundContent && entry.outboundContent !== "";
+
+        return (
+          <div key={entry.id} className="relative" data-testid={`history-entry-${idx}`}>
+            {idx < history.length - 1 && (
+              <div className="absolute left-4 top-12 bottom-0 w-px bg-border -mb-3" />
+            )}
+            <div
+              className="rounded-lg border border-border/60 bg-muted/20 p-3 cursor-pointer hover-elevate"
+              onClick={() => setExpandedRow(isExpanded ? null : entry.id)}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted shrink-0 mt-0.5">
+                  <History className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {entry.initialStatus && (
+                      <Badge variant="outline" className={`text-[10px] ${initialCfg?.color}`}>
+                        <InitialIcon className="w-3 h-3 mr-1" />
+                        {initialCfg?.label || entry.initialStatus}
+                      </Badge>
+                    )}
+                    {entry.initialStatus && entry.newStatus && (
+                      <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                    )}
+                    {entry.newStatus && (
+                      <Badge variant="outline" className={`text-[10px] ${newCfg?.color}`}>
+                        <NewIcon className="w-3 h-3 mr-1" />
+                        {newCfg?.label || entry.newStatus}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                    <p className="text-[10px] text-muted-foreground">
+                      {entry.date ? formatDateTime(entry.date) : "-"}
+                    </p>
+                    {entry.inboundType && (
+                      <Badge variant="secondary" className="text-[10px]">In: {entry.inboundType}</Badge>
+                    )}
+                    {entry.outboundType && (
+                      <Badge variant="secondary" className="text-[10px]">Out: {entry.outboundType}</Badge>
+                    )}
+                    {entry.inboundIdentifier && (
+                      <span className="text-[10px] text-muted-foreground font-mono">{entry.inboundIdentifier}</span>
+                    )}
+                    {entry.outboundIdentifier && entry.outboundIdentifier !== entry.inboundIdentifier && (
+                      <span className="text-[10px] text-muted-foreground font-mono">{entry.outboundIdentifier}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {isExpanded && (hasInbound || hasOutbound) && (
+                <div className="mt-3 space-y-3 pl-11">
+                  {hasInbound && (
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Inbound Content</p>
+                      <pre className="text-[11px] bg-muted/50 rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-border/50" data-testid={`history-inbound-${idx}`}>
+                        {inbound ? JSON.stringify(inbound, null, 2) : entry.inboundContent}
+                      </pre>
+                    </div>
+                  )}
+                  {hasOutbound && (
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Outbound Content</p>
+                      <pre className="text-[11px] bg-muted/50 rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-border/50" data-testid={`history-outbound-${idx}`}>
+                        {outbound ? JSON.stringify(outbound, null, 2) : entry.outboundContent}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState("order");
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
-    queryKey: [`/api/orders/${orderId}`],
+    queryKey: ['/api/orders', orderId],
     enabled: !!orderId && open,
   });
 
@@ -285,6 +421,7 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
     ...(hasShipping ? [{ id: "shipping", label: "Shipping", icon: Truck, color: "bg-cyan-500/15 text-cyan-700" }] : []),
     ...(hasInvoice ? [{ id: "invoice", label: "Invoice", icon: Receipt, color: "bg-emerald-500/15 text-emerald-700" }] : []),
     ...(hasLineItems ? [{ id: "items", label: `Items (${lineItemCount})`, icon: Package, color: "bg-amber-500/15 text-amber-700" }] : []),
+    { id: "history", label: "History", icon: History, color: "bg-slate-500/15 text-slate-700" },
   ];
 
   return (
@@ -525,6 +662,12 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
                       <LineItemsTable items={poLines} />
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeTab === "history" && (
+                <div data-testid="tab-content-history">
+                  <OrderHistoryTimeline orderId={orderId} />
                 </div>
               )}
             </div>

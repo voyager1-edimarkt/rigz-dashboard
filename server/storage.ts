@@ -9,6 +9,7 @@ import type {
   OrderListResult,
   OrderStats,
   OrderDetail,
+  OrderDataRow,
   OrderFilters,
   TableDataResult,
 } from "@shared/schema";
@@ -24,5 +25,6 @@ export interface IStorage {
   getOrders(filters: OrderFilters): Promise<OrderListResult>;
   getOrderStats(): Promise<OrderStats>;
   getOrderById(id: number): Promise<OrderDetail | null>;
+  getOrderHistory(orderId: number): Promise<OrderDataRow[]>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

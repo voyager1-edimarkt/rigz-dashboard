@@ -130,6 +130,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/orders/:id/history", async (req, res) => {
+    try {
+      const history = await storage.getOrderHistory(Number(req.params.id));
+      res.json(history);
+    } catch (err: any) {
+      log(`Error fetching order history: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);

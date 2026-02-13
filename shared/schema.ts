@@ -119,6 +119,20 @@ export interface OrderStats {
   recentByDay: { day: string; cnt: number }[];
 }
 
+export interface OrderDataRow {
+  id: number;
+  orderId: number;
+  date: string | null;
+  initialStatus: string | null;
+  newStatus: string | null;
+  inboundContent: string | null;
+  inboundIdentifier: string | null;
+  inboundType: string | null;
+  outboundContent: string | null;
+  outboundIdentifier: string | null;
+  outboundType: string | null;
+}
+
 export interface CustomerFilters {
   limit: number;
   offset: number;
