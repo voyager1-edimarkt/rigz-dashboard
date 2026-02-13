@@ -97,7 +97,7 @@ function getInitials(name: string | null): string {
 }
 
 const avatarColors = [
-  "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+  "bg-red-500/15 text-red-700 dark:text-red-400",
   "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   "bg-violet-500/15 text-violet-700 dark:text-violet-400",
   "bg-amber-500/15 text-amber-700 dark:text-amber-400",
@@ -302,8 +302,8 @@ export default function Customers() {
     <div className="flex flex-col h-full gap-4 p-4 overflow-auto" data-testid="page-customers">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-500/15">
-            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
+            <Users className="w-5 h-5 text-red-600 dark:text-red-400" />
           </div>
           <div>
             <h1 className="text-xl font-semibold" data-testid="text-customers-title">Customers</h1>
@@ -319,8 +319,8 @@ export default function Customers() {
         <Card data-testid="card-total-customers">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-blue-500/15">
-                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-red-500/15">
+                <Users className="w-4 h-4 text-red-600 dark:text-red-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total Customers</p>

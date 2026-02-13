@@ -156,8 +156,8 @@ export default function Dashboard() {
   return (
     <div className="h-full overflow-auto p-6" data-testid="page-dashboard">
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-500/15">
-          <LayoutDashboard className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
+          <LayoutDashboard className="w-5 h-5 text-red-600" />
         </div>
         <div>
           <h1 className="text-xl font-semibold" data-testid="text-dashboard-title">Dashboard</h1>

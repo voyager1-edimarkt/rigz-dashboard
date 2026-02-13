@@ -88,7 +88,7 @@ interface OrderDetail extends OrderRow {
 }
 
 const STATUS_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
-  PO_RECEIVED: { icon: ClipboardList, color: "bg-blue-500/15 text-blue-700 border-blue-200", label: "PO Received" },
+  PO_RECEIVED: { icon: ClipboardList, color: "bg-red-500/15 text-red-700 border-red-200", label: "PO Received" },
   PO_SENT: { icon: Send, color: "bg-indigo-500/15 text-indigo-700 border-indigo-200", label: "PO Sent" },
   INVOICE_SENT: { icon: FileText, color: "bg-violet-500/15 text-violet-700 border-violet-200", label: "Invoice Sent" },
   INVOICE_RECEIPT: { icon: Receipt, color: "bg-emerald-500/15 text-emerald-700 border-emerald-200", label: "Invoice Receipt" },
@@ -188,7 +188,7 @@ function LineItemsTable({ items }: { items: any[] }) {
             const total = qty * price;
             return (
               <TableRow key={i} className="hover:bg-muted/20" data-testid={`row-line-item-${i}`}>
-                <TableCell className="text-xs font-mono text-blue-600">{sku}</TableCell>
+                <TableCell className="text-xs font-mono text-red-600">{sku}</TableCell>
                 <TableCell className="text-xs max-w-[220px] truncate">{desc}</TableCell>
                 <TableCell className="text-xs text-right tabular-nums">{qty}</TableCell>
                 <TableCell className="text-xs text-right tabular-nums text-muted-foreground">{formatCurrency(price)}</TableCell>
@@ -198,7 +198,7 @@ function LineItemsTable({ items }: { items: any[] }) {
           })}
           <TableRow className="bg-muted/30 border-t-2">
             <TableCell colSpan={4} className="text-xs font-bold text-right uppercase tracking-wider">Grand Total</TableCell>
-            <TableCell className="text-sm text-right font-bold tabular-nums text-blue-600">{formatCurrency(grandTotal)}</TableCell>
+            <TableCell className="text-sm text-right font-bold tabular-nums text-red-600">{formatCurrency(grandTotal)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -280,7 +280,7 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
   const lineItemCount = allLineItems.length + poLines.length;
 
   const tabs: TabDef[] = [
-    { id: "order", label: "Order Info", icon: ClipboardList, color: "bg-blue-500/15 text-blue-700" },
+    { id: "order", label: "Order Info", icon: ClipboardList, color: "bg-red-500/15 text-red-700" },
     ...(hasCustomer ? [{ id: "customer", label: "Customer", icon: User, color: "bg-violet-500/15 text-violet-700" }] : []),
     ...(hasShipping ? [{ id: "shipping", label: "Shipping", icon: Truck, color: "bg-cyan-500/15 text-cyan-700" }] : []),
     ...(hasInvoice ? [{ id: "invoice", label: "Invoice", icon: Receipt, color: "bg-emerald-500/15 text-emerald-700" }] : []),
@@ -353,7 +353,7 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 gap-3">
-                    <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-blue-500/10" testId="text-detail-order-num" />
+                    <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
                     <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -364,7 +364,7 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pt-1">Timeline</p>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="p-3 rounded-lg bg-muted/30 border border-border/50 text-center">
-                      <Calendar className="w-4 h-4 mx-auto text-blue-500 mb-1" />
+                      <Calendar className="w-4 h-4 mx-auto text-red-500 mb-1" />
                       <p className="text-xs font-bold">{formatDate(order.orderDate)}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Order Date</p>
                     </div>
@@ -471,9 +471,9 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
                         <p className="text-2xl font-bold text-emerald-700">{formatCurrency(invoiceTotal.amount)}</p>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Total Amount</p>
                       </div>
-                      <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-200/50">
-                        <DollarSign className="w-5 h-5 text-blue-600" />
-                        <p className="text-2xl font-bold text-blue-700">{formatCurrency(invoiceTotal.netAmount)}</p>
+                      <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-200/50">
+                        <DollarSign className="w-5 h-5 text-red-600" />
+                        <p className="text-2xl font-bold text-red-700">{formatCurrency(invoiceTotal.netAmount)}</p>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Net Amount</p>
                       </div>
                     </div>
@@ -579,8 +579,8 @@ export default function Orders() {
     <div className="flex flex-col h-full gap-4 p-4 overflow-auto" data-testid="page-orders">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-500/15">
-            <ShoppingCart className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
+            <ShoppingCart className="w-5 h-5 text-red-600" />
           </div>
           <div>
             <h1 className="text-xl font-semibold" data-testid="text-orders-title">Orders</h1>
@@ -697,8 +697,8 @@ export default function Orders() {
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-500/15 shrink-0">
-                            <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
+                            <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
                           </div>
                           <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
                             {row.orderNumber}
