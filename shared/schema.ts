@@ -133,6 +133,50 @@ export interface OrderDataRow {
   outboundType: string | null;
 }
 
+export interface ProductRow {
+  sku: string;
+  status: string;
+  name: string | null;
+  description: string | null;
+  upc: string | null;
+  basePrice: number | null;
+  location: string | null;
+  vendor: string | null;
+  vendorCode: string | null;
+  crmId: string | null;
+  active: any;
+  srp: number | null;
+  createdAt: string;
+  updatedAt: string;
+  deleted: any;
+  purchasePrice: number | null;
+}
+
+export interface ProductListResult {
+  rows: ProductRow[];
+  total: number;
+}
+
+export interface ProductStats {
+  total: number;
+  activeCount: number;
+  deletedCount: number;
+  syncedCount: number;
+  avgPrice: number;
+  byVendor: { vendor: string | null; cnt: number }[];
+  byLocation: { location: string | null; cnt: number }[];
+}
+
+export interface ProductFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+  status?: string;
+  vendor?: string;
+  location?: string;
+  active?: string;
+}
+
 export interface CustomerFilters {
   limit: number;
   offset: number;

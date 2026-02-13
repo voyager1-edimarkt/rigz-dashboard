@@ -21,6 +21,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `client/src/pages/query-runner.tsx` - SQL query runner
 - `client/src/pages/customers.tsx` - Customer management with stats, search, filters, detail sheet
 - `client/src/pages/orders.tsx` - Orders management with stats, search, status filter, detail sheet with parsed JSON content
+- `client/src/pages/products.tsx` - Products management with stats, search, vendor/location/status filters, detail sheet
 - `client/src/pages/dashboard.tsx` - Dashboard with US/Canada maps showing customer distribution
 - `client/src/components/connection-badge.tsx` - Connection status indicator
 - `shared/schema.ts` - TypeScript types and Zod schemas
@@ -37,6 +38,8 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/orders/stats` - Order statistics (total, by status, recent by day)
 - `GET /api/orders/:id` - Order detail with full JSON content fields
 - `GET /api/orders/:id/history` - Order history from order_data table (status changes, inbound/outbound content)
+- `GET /api/products?limit=&offset=&search=&status=&vendor=&location=&active=` - Paginated product list
+- `GET /api/products/stats` - Product statistics (total, active, synced, deleted, avg price, by vendor, by location)
 - `POST /api/query` - Execute custom SQL
 
 ## Environment Variables
@@ -44,6 +47,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Products page with stats cards, top vendors/warehouse bar charts, searchable/filterable table (SKU, status, vendor, location, active), and detail sheet with pricing/margin info
 - 2026-02-13: Comprehensive 9-tab order detail page: Overview (summary cards, timeline, metadata), Order Details (deep dive), Line Items (filter/sort/stats), Financials (summary + breakdown), Supplier, Customer & Shipping, Documents (viewer dialogs), Invoices (conditional with discrepancy warning), Activity Log
 - 2026-02-13: Replaced inline inbound/outbound content with Dialog modal that parses EDI 850 data and JSON into human-readable cards/tables, with raw data toggle and copy button
 - 2026-02-13: Added order history (order_data table) to order detail sheet with timeline view showing status changes and expandable inbound/outbound content

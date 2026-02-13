@@ -11,6 +11,9 @@ import type {
   OrderStats,
   OrderDetail,
   OrderFilters,
+  ProductListResult,
+  ProductStats,
+  ProductFilters,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -208,6 +211,74 @@ export class MySQLStorage implements IStorage {
       [orderId]
     );
     return rows as any[];
+  }
+
+  async getProducts(filters: ProductFilters): Promise<ProductListResult> {
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (filters.search) {
+      where += " AND (p.sku LIKE ? OR p.description LIKE ? OR p.upc LIKE ? OR p.vendorCode LIKE ?)";
+      const s = `%${filters.search}%`;
+      params.push(s, s, s, s);
+    }
+    if (filters.status) {
+      where += " AND p.status = ?";
+      params.push(filters.status);
+    }
+    if (filters.vendor) {
+      where += " AND p.vendor = ?";
+      params.push(filters.vendor);
+    }
+    if (filters.location) {
+      where += " AND p.location = ?";
+      params.push(filters.location);
+    }
+    if (filters.active === "1") {
+      where += " AND p.active = 1";
+    } else if (filters.active === "0") {
+      where += " AND p.active = 0";
+    }
+
+    const countResult = await queryNoDb(
+      `SELECT COUNT(*) as total FROM runtime.products p ${where}`,
+      params
+    );
+    const total = Number((countResult as any[])[0]?.total ?? 0);
+
+    const rows = await queryNoDb(
+      `SELECT p.sku, p.status, p.name, p.description, p.upc, p.basePrice, p.location, p.vendor, p.vendorCode, p.crmId, p.active, p.srp, p.createdAt, p.updatedAt, p.deleted, p.purchasePrice
+       FROM runtime.products p ${where}
+       ORDER BY p.updatedAt DESC
+       LIMIT ${filters.limit} OFFSET ${filters.offset}`,
+      params
+    );
+
+    return { rows: rows as any[], total };
+  }
+
+  async getProductStats(): Promise<ProductStats> {
+    const [totalResult, vendorResult, locationResult] = await Promise.all([
+      queryNoDb(`SELECT COUNT(*) as total,
+        SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) as activeCount,
+        SUM(CASE WHEN deleted = 1 THEN 1 ELSE 0 END) as deletedCount,
+        SUM(CASE WHEN status = 'SYNCED' THEN 1 ELSE 0 END) as syncedCount,
+        AVG(basePrice) as avgPrice
+        FROM runtime.products`),
+      queryNoDb("SELECT vendor, COUNT(*) as cnt FROM runtime.products GROUP BY vendor ORDER BY cnt DESC LIMIT 10"),
+      queryNoDb("SELECT location, COUNT(*) as cnt FROM runtime.products GROUP BY location ORDER BY cnt DESC"),
+    ]);
+
+    const row = (totalResult as any[])[0] || {};
+    return {
+      total: Number(row.total ?? 0),
+      activeCount: Number(row.activeCount ?? 0),
+      deletedCount: Number(row.deletedCount ?? 0),
+      syncedCount: Number(row.syncedCount ?? 0),
+      avgPrice: Number(row.avgPrice ?? 0),
+      byVendor: vendorResult as any[],
+      byLocation: locationResult as any[],
+    };
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {

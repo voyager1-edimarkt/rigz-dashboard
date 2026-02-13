@@ -140,6 +140,34 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/products", async (req, res) => {
+    try {
+      const result = await storage.getProducts({
+        limit: Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 500),
+        offset: Math.max(parseInt(req.query.offset as string) || 0, 0),
+        search: (req.query.search as string) || undefined,
+        status: (req.query.status as string) || undefined,
+        vendor: (req.query.vendor as string) || undefined,
+        location: (req.query.location as string) || undefined,
+        active: (req.query.active as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching products: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/products/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getProductStats();
+      res.json(stats);
+    } catch (err: any) {
+      log(`Error fetching product stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);

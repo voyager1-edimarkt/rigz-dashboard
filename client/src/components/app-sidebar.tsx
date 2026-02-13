@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, RefreshCw, ChevronDown } from "lucide-react";
+import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, Package, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +111,16 @@ export function AppSidebar({
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>Orders</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/products" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/products")}
+                data-testid="button-products"
+              >
+                <Package className="w-4 h-4" />
+                <span>Products</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
