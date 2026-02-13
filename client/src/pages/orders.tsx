@@ -79,7 +79,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
@@ -677,13 +677,14 @@ function ContentViewerDialog({ open, onClose, title, titleIcon, content, rawCont
   const { toast } = useToast();
   const TitleIcon = titleIcon;
 
-  const prevContentRef = useState<string | null>(null);
-  if (open && content !== prevContentRef[0]) {
-    prevContentRef[0] = content;
+  const prevContentRef = useRef<string | null>(null);
+  if (open && content !== prevContentRef.current) {
+    prevContentRef.current = content;
     if (showRaw) setShowRaw(false);
     if (copied) setCopied(false);
   }
 
+  if (!open) return null;
   if (!content && !rawContent) return null;
 
   const effectiveRaw = rawContent || content || "";
@@ -1614,15 +1615,6 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                   </CardContent>
                 </Card>
 
-                <ContentViewerDialog
-                  open={docDialog.open}
-                  onClose={() => setDocDialog({ open: false, title: "", content: null })}
-                  title={docDialog.title}
-                  titleIcon={docDialog.title.includes("Invoice") ? Receipt : ClipboardList}
-                  content={docDialog.content}
-                  rawContent={docDialog.content}
-                  accentColor={docDialog.title.includes("Invoice") ? "emerald" : "blue"}
-                />
               </div>
             )}
 
@@ -1701,6 +1693,16 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                 <OrderHistoryTimeline orderId={orderId} />
               </div>
             )}
+
+            <ContentViewerDialog
+              open={docDialog.open}
+              onClose={() => setDocDialog({ open: false, title: "", content: null })}
+              title={docDialog.title}
+              titleIcon={docDialog.title.includes("Invoice") ? Receipt : ClipboardList}
+              content={docDialog.content}
+              rawContent={docDialog.content}
+              accentColor={docDialog.title.includes("Invoice") ? "emerald" : "blue"}
+            />
           </div>
         </div>
       ) : (
