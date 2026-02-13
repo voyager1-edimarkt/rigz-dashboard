@@ -50,6 +50,13 @@ import {
   Building2,
   History,
   ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Inbox,
+  Send as SendIcon,
+  Zap,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -255,6 +262,19 @@ interface OrderDataRow {
   outboundType: string | null;
 }
 
+const STEP_COLORS = [
+  { bg: "bg-red-500", ring: "ring-red-200 dark:ring-red-900", dot: "bg-red-100 dark:bg-red-950" },
+  { bg: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", dot: "bg-blue-100 dark:bg-blue-950" },
+  { bg: "bg-emerald-500", ring: "ring-emerald-200 dark:ring-emerald-900", dot: "bg-emerald-100 dark:bg-emerald-950" },
+  { bg: "bg-violet-500", ring: "ring-violet-200 dark:ring-violet-900", dot: "bg-violet-100 dark:bg-violet-950" },
+  { bg: "bg-amber-500", ring: "ring-amber-200 dark:ring-amber-900", dot: "bg-amber-100 dark:bg-amber-950" },
+  { bg: "bg-cyan-500", ring: "ring-cyan-200 dark:ring-cyan-900", dot: "bg-cyan-100 dark:bg-cyan-950" },
+  { bg: "bg-pink-500", ring: "ring-pink-200 dark:ring-pink-900", dot: "bg-pink-100 dark:bg-pink-950" },
+  { bg: "bg-orange-500", ring: "ring-orange-200 dark:ring-orange-900", dot: "bg-orange-100 dark:bg-orange-950" },
+];
+
+const STEP_ICONS = [Zap, ClipboardList, Send, FileText, Receipt, Truck, CheckCircle2, Package];
+
 function OrderHistoryTimeline({ orderId }: { orderId: number }) {
   const { data: history, isLoading } = useQuery<OrderDataRow[]>({
     queryKey: ['/api/orders', orderId, 'history'],
@@ -265,9 +285,15 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4 py-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          <div key={i} className="flex gap-4">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -275,102 +301,144 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
 
   if (!history || history.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 gap-2">
-        <History className="w-8 h-8 text-muted-foreground/40" />
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted/50">
+          <History className="w-7 h-7 text-muted-foreground/40" />
+        </div>
         <p className="text-sm text-muted-foreground">No history records found</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3" data-testid="order-history-timeline">
-      {history.map((entry, idx) => {
-        const isExpanded = expandedRow === entry.id;
-        const initialCfg = entry.initialStatus ? getStatusConfig(entry.initialStatus) : null;
-        const newCfg = entry.newStatus ? getStatusConfig(entry.newStatus) : null;
-        const InitialIcon = initialCfg?.icon || AlertCircle;
-        const NewIcon = newCfg?.icon || AlertCircle;
+    <div className="relative" data-testid="order-history-timeline">
+      <div className="absolute left-5 top-6 bottom-6 w-0.5 bg-gradient-to-b from-red-300 via-blue-300 to-emerald-300 dark:from-red-800 dark:via-blue-800 dark:to-emerald-800 rounded-full" />
 
-        const inbound = safeParseJson(entry.inboundContent);
-        const outbound = safeParseJson(entry.outboundContent);
-        const hasInbound = !!entry.inboundContent && entry.inboundContent !== "";
-        const hasOutbound = !!entry.outboundContent && entry.outboundContent !== "";
+      <div className="space-y-1">
+        {history.map((entry, idx) => {
+          const isExpanded = expandedRow === entry.id;
+          const initialCfg = entry.initialStatus ? getStatusConfig(entry.initialStatus) : null;
+          const newCfg = entry.newStatus ? getStatusConfig(entry.newStatus) : null;
+          const InitialIcon = initialCfg?.icon || AlertCircle;
+          const NewIcon = newCfg?.icon || AlertCircle;
 
-        return (
-          <div key={entry.id} className="relative" data-testid={`history-entry-${idx}`}>
-            {idx < history.length - 1 && (
-              <div className="absolute left-4 top-12 bottom-0 w-px bg-border -mb-3" />
-            )}
-            <div
-              className="rounded-lg border border-border/60 bg-muted/20 p-3 cursor-pointer hover-elevate"
-              onClick={() => setExpandedRow(isExpanded ? null : entry.id)}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted shrink-0 mt-0.5">
-                  <History className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
+          const inbound = safeParseJson(entry.inboundContent);
+          const outbound = safeParseJson(entry.outboundContent);
+          const hasInbound = !!entry.inboundContent && entry.inboundContent !== "";
+          const hasOutbound = !!entry.outboundContent && entry.outboundContent !== "";
+          const hasContent = hasInbound || hasOutbound;
+
+          const colorSet = STEP_COLORS[idx % STEP_COLORS.length];
+          const StepIcon = STEP_ICONS[idx % STEP_ICONS.length];
+
+          return (
+            <div key={entry.id} className="relative pl-12 pb-4" data-testid={`history-entry-${idx}`}>
+              <div className={`absolute left-2 top-1 w-7 h-7 rounded-full ${colorSet.dot} ring-4 ${colorSet.ring} flex items-center justify-center z-10`}>
+                <StepIcon className={`w-3.5 h-3.5 text-white ${colorSet.bg} rounded-full p-0.5`} />
+              </div>
+
+              <div
+                className={`rounded-xl border border-border/40 bg-card p-3.5 transition-all ${hasContent ? "cursor-pointer" : ""}`}
+                onClick={() => hasContent && setExpandedRow(isExpanded ? null : entry.id)}
+              >
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     {entry.initialStatus && (
-                      <Badge variant="outline" className={`text-[10px] ${initialCfg?.color}`}>
+                      <Badge variant="outline" className={`text-[10px] font-semibold ${initialCfg?.color}`}>
                         <InitialIcon className="w-3 h-3 mr-1" />
                         {initialCfg?.label || entry.initialStatus}
                       </Badge>
                     )}
                     {entry.initialStatus && entry.newStatus && (
-                      <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
                     )}
                     {entry.newStatus && (
-                      <Badge variant="outline" className={`text-[10px] ${newCfg?.color}`}>
+                      <Badge variant="outline" className={`text-[10px] font-semibold ${newCfg?.color}`}>
                         <NewIcon className="w-3 h-3 mr-1" />
                         {newCfg?.label || entry.newStatus}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    <p className="text-[10px] text-muted-foreground">
+                  {hasContent && (
+                    <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" data-testid={`button-expand-${idx}`}>
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3 text-muted-foreground/60" />
+                    <p className="text-[11px] text-muted-foreground">
                       {entry.date ? formatDateTime(entry.date) : "-"}
                     </p>
-                    {entry.inboundType && (
-                      <Badge variant="secondary" className="text-[10px]">In: {entry.inboundType}</Badge>
-                    )}
-                    {entry.outboundType && (
-                      <Badge variant="secondary" className="text-[10px]">Out: {entry.outboundType}</Badge>
-                    )}
+                  </div>
+                  {entry.inboundType && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      <Inbox className="w-2.5 h-2.5" />
+                      {entry.inboundType}
+                    </Badge>
+                  )}
+                  {entry.outboundType && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      <SendIcon className="w-2.5 h-2.5" />
+                      {entry.outboundType}
+                    </Badge>
+                  )}
+                </div>
+
+                {(entry.inboundIdentifier || entry.outboundIdentifier) && (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     {entry.inboundIdentifier && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{entry.inboundIdentifier}</span>
+                      <span className="text-[10px] text-muted-foreground/70 font-mono bg-muted/50 px-1.5 py-0.5 rounded">
+                        {entry.inboundIdentifier}
+                      </span>
                     )}
                     {entry.outboundIdentifier && entry.outboundIdentifier !== entry.inboundIdentifier && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{entry.outboundIdentifier}</span>
+                      <span className="text-[10px] text-muted-foreground/70 font-mono bg-muted/50 px-1.5 py-0.5 rounded">
+                        {entry.outboundIdentifier}
+                      </span>
                     )}
                   </div>
-                </div>
-              </div>
+                )}
 
-              {isExpanded && (hasInbound || hasOutbound) && (
-                <div className="mt-3 space-y-3 pl-11">
-                  {hasInbound && (
-                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Inbound Content</p>
-                      <pre className="text-[11px] bg-muted/50 rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-border/50" data-testid={`history-inbound-${idx}`}>
-                        {inbound ? JSON.stringify(inbound, null, 2) : entry.inboundContent}
-                      </pre>
-                    </div>
-                  )}
-                  {hasOutbound && (
-                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Outbound Content</p>
-                      <pre className="text-[11px] bg-muted/50 rounded-md p-3 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-border/50" data-testid={`history-outbound-${idx}`}>
-                        {outbound ? JSON.stringify(outbound, null, 2) : entry.outboundContent}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
+                {isExpanded && hasContent && (
+                  <div className="mt-3 space-y-3 border-t border-border/30 pt-3">
+                    {hasInbound && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Inbox className="w-3 h-3 text-blue-500" />
+                          <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Inbound Content</p>
+                        </div>
+                        <pre
+                          className="text-[11px] bg-blue-500/5 dark:bg-blue-500/10 rounded-lg p-3 overflow-x-auto max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-blue-200/30 dark:border-blue-800/30"
+                          data-testid={`history-inbound-${idx}`}
+                        >
+                          {inbound ? JSON.stringify(inbound, null, 2) : entry.inboundContent}
+                        </pre>
+                      </div>
+                    )}
+                    {hasOutbound && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <SendIcon className="w-3 h-3 text-emerald-500" />
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Outbound Content</p>
+                        </div>
+                        <pre
+                          className="text-[11px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-lg p-3 overflow-x-auto max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-emerald-200/30 dark:border-emerald-800/30"
+                          data-testid={`history-outbound-${idx}`}
+                        >
+                          {outbound ? JSON.stringify(outbound, null, 2) : entry.outboundContent}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
