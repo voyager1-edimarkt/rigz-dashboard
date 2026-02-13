@@ -1,0 +1,259 @@
+Overview Tab (Executive Snapshot)
+
+This is the first screen when user clicks an order.
+
+🔹 Top Summary Cards (Horizontal)
+Card	Shows
+🧾 Order Status	Status + Status Message
+📦 PO Number	PO Number + Type
+💰 Gross Amount	Gross + Total Items
+🚚 Delivery	Planned Delivery Date
+🏷 Brand	Brand
+🏢 Vendor	Vendor Name + Vendor Number
+🔹 Order Timeline (Horizontal Timeline UI)
+Order Created → PO Generated → Shipment Date → Delivery Date → Invoice (if any)
+
+If Shipment Date exists → highlight it.
+If Planned Delivery Date passed → show warning icon.
+
+🔹 Channel & Metadata Panel (Compact right column)
+
+Order Number
+
+Channel
+
+Test Flag (badge if true)
+
+CRM ID
+
+Created At / Updated At
+
+Country
+
+2️⃣ Order Details Tab (Raw + Structured Info)
+
+This is your “deep dive” tab.
+
+🔹 Basic Order Info Section
+
+Table layout (2-column grid)
+
+Left Column:
+
+Order ID
+
+Order Number
+
+Index
+
+Purchase Order ID
+
+Purchase Order Number
+
+Right Column:
+
+Status
+
+Status Message
+
+Channel
+
+Created At
+
+Updated At
+
+🔹 PO Content Section
+Field	Value
+PO Number	
+Date	
+PO Type	
+Price Identifier	
+Vendor Number	
+Payment Mode	
+Terms	
+Allowance/Charge	
+Gross Amount	
+
+Add badges:
+
+🟢 Stand-alone Order
+
+🔵 Original
+
+3️⃣ Line Items Tab (Most Important Operational View)
+
+This should be powerful.
+
+🔹 Line Items Table (Advanced Data Grid)
+
+Columns:
+
+| Item No | SKU | Description | Vendor No | UPC | Size | Price | Req Qty | Acc Qty | UOM | Total | Rebate |
+
+Add:
+
+Sort by price
+
+Filter by SKU
+
+Highlight if Requested ≠ Accepted
+
+Expand row to show:
+
+Allowances
+
+Size (Width / Height / Depth)
+
+🔹 Line Items Summary (Above table)
+
+Total Items
+
+Total Amount
+
+Total Accepted Qty
+
+Total Requested Qty
+
+Total Rebates
+
+4️⃣ Financials Tab
+
+This is where you show money breakdown clearly.
+
+🔹 Financial Summary Cards
+
+Gross Amount
+
+Allowances/Charges
+
+Rebates
+
+Net Total (calculated)
+
+🔹 Financial Breakdown Chart
+
+Pie Chart:
+
+Product Total
+
+Rebates
+
+Allowances
+
+Bar Chart:
+
+Item-level total comparison
+
+5️⃣ Supplier Tab
+🔹 Supplier Info Card
+Field	Value
+Name	
+Warehouse Zip	
+Phone	
+Email	
+Fax	
+
+Add:
+
+Click to email
+
+Click to call
+
+Map preview of warehouse zip
+
+6️⃣ Customer & Shipping Tab
+
+Split into 3 cards:
+
+🏢 Customer
+
+Name
+
+ID
+
+Email
+
+Address
+
+🚚 Ship To
+
+Name
+
+Location Code
+
+Address
+
+Email
+
+💳 Bill To
+
+Name
+
+Address
+
+Email
+
+Add:
+
+“Same as Customer” badge if identical
+
+7️⃣ Documents Tab
+
+Since you have:
+
+Packing Slip URL
+
+PO Content
+
+Invoice Content (empty now)
+
+Layout:
+
+🔹 Documents Available
+
+📎 Packing Slip (Download button)
+
+📄 PO Content (if exists)
+
+🧾 Invoice (if exists)
+
+If empty:
+Show placeholder card:
+
+“No invoice generated yet.”
+
+8️⃣ Invoices Tab (Conditional)
+
+Only visible if Invoice Content exists.
+
+Show:
+
+Invoice Number
+
+Invoice Date
+
+Tracking Numbers
+
+Line Items invoiced
+
+Invoice Total
+
+Difference from PO total
+
+Add:
+
+Discrepancy warning if mismatch.
+
+9️⃣ Activity Log Tab (Very Useful)
+
+Show timeline:
+
+Order created
+
+Status updated
+
+PO generated
+
+Shipment date added
+
+Invoice attached

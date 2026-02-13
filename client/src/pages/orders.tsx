@@ -71,6 +71,11 @@ import {
   Layers,
   Box,
   Ruler,
+  LayoutDashboard,
+  ExternalLink,
+  Download,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -938,9 +943,31 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
   );
 }
 
+function OrderTimeline({ steps }: { steps: { label: string; date: string | null; completed: boolean; warning?: boolean }[] }) {
+  return (
+    <div className="flex items-center w-full overflow-x-auto" data-testid="order-timeline">
+      {steps.map((step, i) => (
+        <div key={i} className="flex items-center flex-1 min-w-0">
+          <div className="flex flex-col items-center gap-1">
+            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
+            <p className={`text-[10px] font-medium text-center ${step.completed ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
+            {step.date && <p className="text-[9px] text-muted-foreground">{step.date}</p>}
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted-foreground/20'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function OrderDetailPage({ orderId }: { orderId: number }) {
-  const [activeTab, setActiveTab] = useState("order");
+  const [activeTab, setActiveTab] = useState("overview");
   const [, navigate] = useLocation();
+  const [docDialog, setDocDialog] = useState<{ open: boolean; title: string; content: string | null }>({ open: false, title: "", content: null });
+  const [skuFilter, setSkuFilter] = useState("");
+  const [sortByPrice, setSortByPrice] = useState(false);
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: ['/api/orders', orderId],
@@ -969,20 +996,66 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
   const statusCfg = order ? getStatusConfig(order.status) : null;
   const StatusIcon = statusCfg?.icon || AlertCircle;
 
-  const hasCustomer = !!customerInfo;
-  const hasShipping = !!shippingInfo || !!billingInfo;
   const hasInvoice = !!invoiceMeta;
   const hasLineItems = contentLines.length > 0 || poLines.length > 0 || invoiceLines.length > 0;
+  const hasSupplier = !!(content?.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email));
 
   const allLineItems = invoiceLines.length > 0 ? invoiceLines : contentLines;
   const lineItemCount = allLineItems.length + poLines.length;
 
+  const itemsForCalc = allLineItems;
+  const totalItemsCount = itemsForCalc.length;
+  const totalAmount = itemsForCalc.reduce((s: number, it: any) => {
+    const total = parseFloat(it.totalAmount || "0") || 0;
+    if (total > 0) return s + total;
+    const qty = parseFloat(it.requestedQuantity || it.quantity || it.qty || "0") || 0;
+    const price = parseFloat(it.price || it.unitPrice || "0") || 0;
+    return s + qty * price;
+  }, 0);
+  const totalAccepted = itemsForCalc.reduce((s: number, it: any) => s + (parseFloat(it.acceptedQuantity || "0") || 0), 0);
+  const totalRequested = itemsForCalc.reduce((s: number, it: any) => s + (parseFloat(it.requestedQuantity || it.quantity || it.qty || "0") || 0), 0);
+  const totalRebates = itemsForCalc.reduce((s: number, it: any) => {
+    const r = it.rebate;
+    if (!r) return s;
+    const num = typeof r === "string" ? parseFloat(r) : r;
+    return s + (isNaN(num) ? 0 : num);
+  }, 0);
+
+  const grossNum = parseFloat(content?.grossAmount || "0") || 0;
+  const allowanceNum = parseFloat(content?.allowanceOrCharge || "0") || 0;
+  const netTotal = grossNum > 0 ? grossNum - allowanceNum + totalRebates : parseFloat(content?.totalAmount || "0") || 0;
+
+  const deliveryPassed = content?.plannedDeliveryDate ? new Date(content.plannedDeliveryDate) < new Date() : false;
+
+  const timelineSteps = [
+    { label: "Created", date: order ? formatDate(order.createdAt) : null, completed: !!order },
+    { label: "PO Generated", date: content?.date ? formatDate(content.date) : null, completed: !!content?.date },
+    { label: "Shipment", date: content?.shipmentDate ? formatDate(content.shipmentDate) : null, completed: !!content?.shipmentDate },
+    { label: "Delivery", date: content?.plannedDeliveryDate ? formatDate(content.plannedDeliveryDate) : null, completed: deliveryPassed, warning: deliveryPassed && !hasInvoice },
+    { label: "Invoice", date: invoiceMeta ? formatDate(invoiceMeta.date) : null, completed: !!invoiceMeta },
+  ];
+
+  const filteredItems = allLineItems.filter((item: any) => {
+    if (!skuFilter) return true;
+    const term = skuFilter.toLowerCase();
+    const sku = (item.sku || item.number || item.itemCode || "").toLowerCase();
+    const desc = (item.itemDesc || item.description || "").toLowerCase();
+    return sku.includes(term) || desc.includes(term);
+  });
+  const sortedItems = sortByPrice
+    ? [...filteredItems].sort((a: any, b: any) => (parseFloat(b.price || "0") || 0) - (parseFloat(a.price || "0") || 0))
+    : filteredItems;
+
   const tabs: TabDef[] = [
-    { id: "order", label: "Overview", icon: ClipboardList, color: "bg-red-500/15 text-red-700" },
-    ...(hasShipping ? [{ id: "shipping", label: "Shipping", icon: Truck, color: "bg-cyan-500/15 text-cyan-700" }] : []),
-    ...(hasInvoice ? [{ id: "invoice", label: "Invoice", icon: Receipt, color: "bg-emerald-500/15 text-emerald-700" }] : []),
-    ...(hasLineItems ? [{ id: "items", label: `Items (${lineItemCount})`, icon: Package, color: "bg-amber-500/15 text-amber-700" }] : []),
-    { id: "history", label: "History", icon: History, color: "bg-slate-500/15 text-slate-700" },
+    { id: "overview", label: "Overview", icon: LayoutDashboard, color: "bg-red-500/15 text-red-700" },
+    { id: "details", label: "Order Details", icon: ClipboardList, color: "bg-blue-500/15 text-blue-700" },
+    ...(hasLineItems ? [{ id: "items", label: `Line Items (${lineItemCount})`, icon: Package, color: "bg-amber-500/15 text-amber-700" }] : []),
+    { id: "financials", label: "Financials", icon: DollarSign, color: "bg-emerald-500/15 text-emerald-700" },
+    ...(hasSupplier ? [{ id: "supplier", label: "Supplier", icon: Building2, color: "bg-purple-500/15 text-purple-700" }] : []),
+    { id: "customer", label: "Customer & Shipping", icon: User, color: "bg-cyan-500/15 text-cyan-700" },
+    { id: "documents", label: "Documents", icon: FileText, color: "bg-slate-500/15 text-slate-700" },
+    ...(hasInvoice ? [{ id: "invoices", label: "Invoices", icon: Receipt, color: "bg-teal-500/15 text-teal-700" }] : []),
+    { id: "activity", label: "Activity Log", icon: History, color: "bg-orange-500/15 text-orange-700" },
   ];
 
   return (
@@ -1067,269 +1140,567 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
           </div>
 
           <div className="px-6 pt-4">
-              {activeTab === "order" && (
-                <div className="space-y-6" data-testid="tab-content-order">
-                  <div>
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="rounded-md border bg-card p-5 space-y-4">
-                        <DetailRow icon={FileText} label="PO Number" value={content?.poNumber || order.orderNumber} testId="text-detail-order-num" />
-                        <DetailRow icon={Hash} label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
-                        <DetailRow icon={Package} label="Vendor" value={order.vendor} testId="text-detail-vendor" />
-                        <DetailRow icon={Globe} label="Country" value={order.country} testId="text-detail-country" />
-                        {content?.status && <DetailRow icon={Zap} label="PO Status" value={content.status} />}
-                        {content?.poType && <DetailRow icon={ClipboardList} label="PO Type" value={content.poType} />}
-                        {content?.brand && <DetailRow icon={Tag} label="Brand" value={content.brand} />}
-                        {content?.terms && <DetailRow icon={FileText} label="Terms" value={content.terms} />}
-                        {content?.vendorNumber && <DetailRow icon={Hash} label="Vendor Number" value={content.vendorNumber} />}
-                        {content?.paymentMode && <DetailRow icon={CreditCard} label="Payment Mode" value={content.paymentMode} />}
-                        {content?.priceIdentifier?.name && <DetailRow icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} />}
+            {activeTab === "overview" && (
+              <div className="space-y-6" data-testid="tab-content-overview">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <Card data-testid="card-overview-status">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-red-500/15 shrink-0">
+                          <StatusIcon className="w-4 h-4 text-red-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Order Status</p>
+                          <p className="text-sm font-semibold mt-0.5">{statusCfg?.label || order.status}</p>
+                          {order.statusMessage && <p className="text-xs text-muted-foreground mt-0.5 truncate">{order.statusMessage}</p>}
+                        </div>
                       </div>
-                      <div className="rounded-md border bg-card p-5 space-y-4">
-                        {content?.date && <DetailRow icon={Calendar} label="Order Date" value={formatDate(content.date)} />}
-                        <DetailRow icon={Calendar} label="Created" value={formatDate(order.createdAt)} />
-                        <DetailRow icon={Calendar} label="Updated" value={formatDate(order.updatedAt)} />
-                        {content?.plannedDeliveryDate && <DetailRow icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} />}
-                        {content?.shipNotBefore && <DetailRow icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} />}
-                        {content?.shipNotAfter && <DetailRow icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} />}
-                        {content?.shipmentDate && <DetailRow icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} />}
-                        {content?.shipAccountNumber && <DetailRow icon={Hash} label="Ship Account #" value={content.shipAccountNumber} />}
-                        {content?.totalItems && <DetailRow icon={Layers} label="Total Items" value={content.totalItems} />}
-                        {content?.totalAmount && <DetailRow icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} />}
-                        {content?.grossAmount && <DetailRow icon={DollarSign} label="Gross Amount" value={content.grossAmount} />}
-                        {content?.allowanceOrCharge && <DetailRow icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} />}
-                        {content?.packingSlipUrl && <DetailRow icon={FileText} label="Packing Slip URL" value={content.packingSlipUrl} />}
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-overview-po">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-blue-500/15 shrink-0">
+                          <ClipboardList className="w-4 h-4 text-blue-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">PO Number</p>
+                          <p className="text-sm font-semibold mt-0.5">{content?.poNumber || order.orderNumber}</p>
+                          {content?.poType && <p className="text-xs text-muted-foreground mt-0.5">{content.poType}</p>}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-overview-amount">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-emerald-500/15 shrink-0">
+                          <DollarSign className="w-4 h-4 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Gross Amount</p>
+                          <p className="text-sm font-semibold mt-0.5">{content?.grossAmount || formatCurrency(content?.totalAmount)}</p>
+                          {content?.totalItems && <p className="text-xs text-muted-foreground mt-0.5">{content.totalItems} items</p>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-overview-delivery">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-cyan-500/15 shrink-0">
+                          <Truck className="w-4 h-4 text-cyan-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Delivery</p>
+                          <p className="text-sm font-semibold mt-0.5">{content?.plannedDeliveryDate ? formatDate(content.plannedDeliveryDate) : "-"}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-overview-brand">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-purple-500/15 shrink-0">
+                          <Tag className="w-4 h-4 text-purple-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Brand</p>
+                          <p className="text-sm font-semibold mt-0.5">{content?.brand || "-"}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="card-overview-vendor">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 shrink-0">
+                          <Building2 className="w-4 h-4 text-amber-700" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Vendor</p>
+                          <p className="text-sm font-semibold mt-0.5">{order.vendor}</p>
+                          {content?.vendorNumber && <p className="text-xs text-muted-foreground mt-0.5">#{content.vendorNumber}</p>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                  {order.statusMessage && (
-                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Status Message</p>
-                      </div>
-                      <p className="text-sm mt-1" data-testid="text-detail-status-msg">{order.statusMessage}</p>
-                    </div>
-                  )}
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Timeline</p>
+                    <OrderTimeline steps={timelineSteps} />
+                  </CardContent>
+                </Card>
 
-                  {content && (
-                    <>
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Channel & Metadata</p>
+                    <DetailRow icon={Hash} label="Order Number" value={order.orderNumber} testId="text-overview-order-num" />
+                    <DetailRow icon={Globe} label="Channel" value={order.channel} />
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Zap className="w-3.5 h-3.5 text-muted-foreground/70" />
+                        <p className="text-sm text-muted-foreground">Test</p>
+                      </div>
                       <div>
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Parties</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {content.customer && (
-                            <div className="rounded-md border bg-card p-5 space-y-4">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
-                              {content.customer.name && <DetailRow icon={User} label="Name" value={content.customer.name} />}
-                              {content.customer.id && <DetailRow icon={Hash} label="ID" value={content.customer.id} />}
-                              {content.customer.email && <DetailRow icon={Mail} label="Email" value={content.customer.email} />}
-                              <DetailRow icon={MapPin} label="Address" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || "-"} />
-                            </div>
-                          )}
-
-                          {content.shipTo && (content.shipTo.name || content.shipTo.street) && (
-                            <div className="rounded-md border bg-card p-5 space-y-4">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship To</p>
-                              {content.shipTo.name && <DetailRow icon={User} label="Name" value={content.shipTo.name} />}
-                              {content.shipTo.locationCode && <DetailRow icon={Hash} label="Location Code" value={content.shipTo.locationCode} />}
-                              {content.shipTo.email && <DetailRow icon={Mail} label="Email" value={content.shipTo.email} />}
-                              <DetailRow icon={MapPin} label="Address" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || "-"} />
-                            </div>
-                          )}
-
-                          {content.billTo && (content.billTo.name || content.billTo.street?.trim()) && (
-                            <div className="rounded-md border bg-card p-5 space-y-4">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bill To</p>
-                              {content.billTo.name && <DetailRow icon={User} label="Name" value={content.billTo.name} />}
-                              {content.billTo.email && <DetailRow icon={Mail} label="Email" value={content.billTo.email} />}
-                              <DetailRow icon={MapPin} label="Address" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || "-"} />
-                            </div>
-                          )}
-
-                          {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
-                            <div className="rounded-md border bg-card p-5 space-y-4">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</p>
-                              {content.supplier.name && <DetailRow icon={Building2} label="Name" value={content.supplier.name} />}
-                              {content.supplier.warehouseZip && <DetailRow icon={MapPin} label="Warehouse Zip" value={content.supplier.warehouseZip} />}
-                              {content.supplier.phone && <DetailRow icon={Phone} label="Phone" value={content.supplier.phone} />}
-                              {content.supplier.email && <DetailRow icon={Mail} label="Email" value={content.supplier.email} />}
-                              {content.supplier.fax && <DetailRow icon={Phone} label="Fax" value={content.supplier.fax} />}
-                            </div>
-                          )}
-
-                          {content.vendorInfo && (content.vendorInfo.name || content.vendorInfo.number) && (
-                            <div className="rounded-md border bg-card p-5 space-y-4">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vendor Info</p>
-                              {content.vendorInfo.name && <DetailRow icon={Store} label="Name" value={content.vendorInfo.name} />}
-                              {content.vendorInfo.number && <DetailRow icon={Hash} label="Number" value={content.vendorInfo.number} />}
-                            </div>
-                          )}
-                        </div>
+                        {order.test === 1 || order.test === "1" || order.test === true ? <Badge variant="secondary" className="text-[10px]" data-testid="badge-test-flag">Test</Badge> : <p className="text-sm font-medium">No</p>}
                       </div>
+                    </div>
+                    <DetailRow icon={Hash} label="CRM ID" value={order.crmId} testId="text-overview-crm-id" />
+                    <DetailRow icon={Calendar} label="Created At" value={formatDateTime(order.createdAt)} />
+                    <DetailRow icon={Calendar} label="Updated At" value={formatDateTime(order.updatedAt)} />
+                    <DetailRow icon={Globe} label="Country" value={order.country} />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-                      {content.items && content.items.length > 0 && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Line Items ({content.items.length})</p>
-                          <div className="rounded-md border bg-card overflow-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="text-xs">#</TableHead>
-                                  <TableHead className="text-xs">SKU</TableHead>
-                                  <TableHead className="text-xs">Vendor #</TableHead>
-                                  <TableHead className="text-xs min-w-[200px]">Description</TableHead>
-                                  <TableHead className="text-xs text-right">Price</TableHead>
-                                  <TableHead className="text-xs text-right">Qty Req</TableHead>
-                                  <TableHead className="text-xs text-right">Qty Acc</TableHead>
-                                  <TableHead className="text-xs">UOM</TableHead>
-                                  <TableHead className="text-xs">UPC</TableHead>
-                                  <TableHead className="text-xs">Size</TableHead>
-                                  <TableHead className="text-xs text-right">Total</TableHead>
-                                  <TableHead className="text-xs">Allowances</TableHead>
-                                  <TableHead className="text-xs">Rebate</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {content.items.map((item: any, idx: number) => (
-                                  <TableRow key={idx}>
-                                    <TableCell className="text-xs">{item.itemNo || idx + 1}</TableCell>
-                                    <TableCell className="text-xs font-mono">{item.sku || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.vendorNo || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.itemDesc || "-"}</TableCell>
-                                    <TableCell className="text-xs text-right">{item.price ? formatCurrency(item.price) : "-"}</TableCell>
-                                    <TableCell className="text-xs text-right">{item.requestedQuantity || "-"}</TableCell>
-                                    <TableCell className="text-xs text-right">{item.acceptedQuantity || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.uom || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.upc || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.size ? [item.size.width, item.size.height, item.size.depth].filter(Boolean).join(" x ") : "-"}</TableCell>
-                                    <TableCell className="text-xs text-right">{item.totalAmount ? formatCurrency(item.totalAmount) : "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.allowances || "-"}</TableCell>
-                                    <TableCell className="text-xs">{item.rebate || "-"}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+            {activeTab === "details" && (
+              <div className="space-y-6" data-testid="tab-content-details">
+                <div>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Basic Order Info</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="p-5 space-y-4">
+                        <DetailRow icon={Hash} label="Order ID" value={String(order.id)} testId="text-detail-id" />
+                        <DetailRow icon={Hash} label="Order Number" value={order.orderNumber} testId="text-detail-order-num" />
+                        <DetailRow icon={Hash} label="Index" value={String(order.index)} />
+                        <DetailRow icon={FileText} label="Purchase Order ID" value={content?.poNumber || "-"} />
+                        <DetailRow icon={FileText} label="Purchase Order Number" value={order.purchaseOrderNumber || "-"} />
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Zap className="w-3.5 h-3.5 text-muted-foreground/70" />
+                            <p className="text-sm text-muted-foreground">Status</p>
                           </div>
+                          <Badge variant="outline" className={`text-[10px] font-semibold ${statusCfg?.color}`} data-testid="badge-details-status">
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {statusCfg?.label}
+                          </Badge>
                         </div>
-                      )}
-                    </>
-                  )}
-
-                </div>
-              )}
-
-              {activeTab === "shipping" && (
-                <div className="space-y-4" data-testid="tab-content-shipping">
-                  {shippingInfo && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500/15">
-                          <Truck className="w-3 h-3 text-cyan-600" />
-                        </div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Ship To</p>
-                      </div>
-                      <InfoCard icon={User} label="Name" value={shippingInfo.name} accent="bg-cyan-500/10" />
-                      <InfoCard icon={MapPin} label="Address" accent="bg-cyan-500/10" value={
-                        [shippingInfo.address1 || shippingInfo.street, shippingInfo.address2, shippingInfo.city, shippingInfo.state, shippingInfo.zip, shippingInfo.country]
-                          .filter(Boolean).join(", ")
-                      } />
-                    </div>
-                  )}
-                  {billingInfo && (
-                    <div className="space-y-3">
-                      {shippingInfo && <Separator />}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/15">
-                          <DollarSign className="w-3 h-3 text-indigo-600" />
-                        </div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Bill To</p>
-                      </div>
-                      <InfoCard icon={User} label="Name" value={billingInfo.name} accent="bg-indigo-500/10" />
-                      <InfoCard icon={MapPin} label="Address" accent="bg-indigo-500/10" value={
-                        [billingInfo.address1 || billingInfo.street, billingInfo.address2, billingInfo.city, billingInfo.state, billingInfo.zip, billingInfo.country]
-                          .filter(Boolean).join(", ")
-                      } />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "invoice" && invoiceMeta && (
-                <div className="space-y-3" data-testid="tab-content-invoice">
-                  <div className="grid grid-cols-2 gap-3">
-                    <InfoCard icon={FileText} label="Invoice Number" value={invoiceMeta.number} accent="bg-emerald-500/10" />
-                    <InfoCard icon={Calendar} label="Invoice Date" value={formatDate(invoiceMeta.date)} accent="bg-emerald-500/10" />
+                        <DetailRow icon={AlertCircle} label="Status Message" value={order.statusMessage} testId="text-detail-status-msg" />
+                        <DetailRow icon={Globe} label="Channel" value={order.channel} />
+                        <DetailRow icon={Calendar} label="Created At" value={formatDateTime(order.createdAt)} />
+                        <DetailRow icon={Calendar} label="Updated At" value={formatDateTime(order.updatedAt)} />
+                      </CardContent>
+                    </Card>
                   </div>
-                  {invoiceTotal && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-200/50">
-                        <DollarSign className="w-5 h-5 text-emerald-600" />
-                        <p className="text-2xl font-bold text-emerald-700">{formatCurrency(invoiceTotal.amount)}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Total Amount</p>
+                </div>
+
+                {content && (
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">PO Content</p>
+                    <Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                          {content.poType && <Badge variant="secondary" className="text-[10px]" data-testid="badge-po-type">{content.poType}</Badge>}
+                          {content.status && <Badge variant="outline" className="text-[10px]" data-testid="badge-po-status">{content.status}</Badge>}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                          <DetailRow icon={FileText} label="PO Number" value={content.poNumber} />
+                          <DetailRow icon={Calendar} label="Date" value={formatDate(content.date)} />
+                          <DetailRow icon={ClipboardList} label="PO Type" value={content.poType} />
+                          <DetailRow icon={Tag} label="Price Identifier" value={content.priceIdentifier?.name} />
+                          <DetailRow icon={Hash} label="Vendor Number" value={content.vendorNumber} />
+                          <DetailRow icon={CreditCard} label="Payment Mode" value={content.paymentMode} />
+                          <DetailRow icon={FileText} label="Terms" value={content.terms} />
+                          <DetailRow icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} />
+                          <DetailRow icon={DollarSign} label="Gross Amount" value={content.grossAmount} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "items" && (
+              <div className="space-y-4" data-testid="tab-content-items">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <StatMini icon={Package} label="Total Items" value={String(totalItemsCount)} color="bg-amber-500/10 text-amber-700" />
+                  <StatMini icon={DollarSign} label="Total Amount" value={formatCurrency(totalAmount)} color="bg-emerald-500/10 text-emerald-700" />
+                  <StatMini icon={CheckCircle2} label="Accepted Qty" value={String(totalAccepted)} color="bg-blue-500/10 text-blue-700" />
+                  <StatMini icon={Layers} label="Requested Qty" value={String(totalRequested)} color="bg-purple-500/10 text-purple-700" />
+                  <StatMini icon={Tag} label="Total Rebates" value={formatCurrency(totalRebates)} color="bg-red-500/10 text-red-700" />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Filter by SKU or description..."
+                      value={skuFilter}
+                      onChange={(e) => setSkuFilter(e.target.value)}
+                      className="pl-8"
+                      data-testid="input-sku-filter"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortByPrice(!sortByPrice)}
+                    className={`${sortByPrice ? 'toggle-elevate toggle-elevated' : ''}`}
+                    data-testid="button-sort-price"
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                    Sort by Price
+                  </Button>
+                </div>
+
+                {sortedItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15">
+                        <Package className="w-3 h-3 text-amber-600" />
                       </div>
-                      <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-200/50">
-                        <DollarSign className="w-5 h-5 text-red-600" />
-                        <p className="text-2xl font-bold text-red-700">{formatCurrency(invoiceTotal.netAmount)}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Line Items</p>
+                      <Badge variant="secondary" className="text-[10px]">{sortedItems.length}</Badge>
+                    </div>
+                    <div className="rounded-md border bg-card overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">#</TableHead>
+                            <TableHead className="text-xs">SKU</TableHead>
+                            <TableHead className="text-xs min-w-[200px]">Description</TableHead>
+                            <TableHead className="text-xs">Vendor #</TableHead>
+                            <TableHead className="text-xs">UPC</TableHead>
+                            <TableHead className="text-xs">Size</TableHead>
+                            <TableHead className="text-xs text-right">Price</TableHead>
+                            <TableHead className="text-xs text-right">Req Qty</TableHead>
+                            <TableHead className="text-xs text-right">Acc Qty</TableHead>
+                            <TableHead className="text-xs">UOM</TableHead>
+                            <TableHead className="text-xs text-right">Total</TableHead>
+                            <TableHead className="text-xs">Rebate</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedItems.map((item: any, idx: number) => {
+                            const reqQty = parseFloat(item.requestedQuantity || item.quantity || item.qty || "0") || 0;
+                            const accQty = parseFloat(item.acceptedQuantity || "0") || 0;
+                            const qtyMismatch = reqQty !== accQty && reqQty > 0 && accQty > 0;
+                            const itemSku = item.sku || item.number || item.itemCode || "-";
+                            const itemDesc = item.itemDesc || item.description || "-";
+                            const itemPrice = item.price || item.unitPrice;
+                            const itemTotal = item.totalAmount || (reqQty * (parseFloat(itemPrice || "0") || 0));
+                            return (
+                              <TableRow key={idx} className={qtyMismatch ? "bg-amber-500/5" : ""} data-testid={`row-line-item-${idx}`}>
+                                <TableCell className="text-xs">{item.itemNo || idx + 1}</TableCell>
+                                <TableCell className="text-xs font-mono">{itemSku}</TableCell>
+                                <TableCell className="text-xs">{itemDesc}</TableCell>
+                                <TableCell className="text-xs">{item.vendorNo || "-"}</TableCell>
+                                <TableCell className="text-xs">{item.upc || "-"}</TableCell>
+                                <TableCell className="text-xs">{item.size ? [item.size.width, item.size.height, item.size.depth].filter(Boolean).join(" x ") : "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{itemPrice ? formatCurrency(itemPrice) : "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{item.requestedQuantity || item.quantity || item.qty || "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{item.acceptedQuantity || "-"}</TableCell>
+                                <TableCell className="text-xs">{item.uom || "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{itemTotal ? formatCurrency(itemTotal) : "-"}</TableCell>
+                                <TableCell className="text-xs">{item.rebate || "-"}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {poLines.length > 0 && (
+                  <div>
+                    {sortedItems.length > 0 && <Separator className="mb-4" />}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/15">
+                        <ClipboardList className="w-3 h-3 text-indigo-600" />
+                      </div>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">PO Items</p>
+                      <Badge variant="secondary" className="text-[10px]">{poLines.length}</Badge>
+                    </div>
+                    <LineItemsTable items={poLines} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "financials" && (
+              <div className="space-y-6" data-testid="tab-content-financials">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <DollarSign className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold" data-testid="text-financial-gross">{content?.grossAmount || formatCurrency(content?.totalAmount)}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Gross Amount</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Tag className="w-5 h-5 text-amber-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold" data-testid="text-financial-allowance">{content?.allowanceOrCharge || "-"}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Allowances/Charges</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Tag className="w-5 h-5 text-red-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold" data-testid="text-financial-rebates">{formatCurrency(totalRebates)}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Rebates</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <DollarSign className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold" data-testid="text-financial-net">{formatCurrency(netTotal)}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Net Total</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {itemsForCalc.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Item-level Breakdown</p>
+                    <div className="rounded-md border bg-card overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40">
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider">SKU</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Price</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Qty</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Total</TableHead>
+                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Rebate</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {itemsForCalc.map((item: any, idx: number) => (
+                            <TableRow key={idx} data-testid={`row-financial-item-${idx}`}>
+                              <TableCell className="text-xs font-mono">{item.sku || "-"}</TableCell>
+                              <TableCell className="text-xs text-right tabular-nums">{item.price ? formatCurrency(item.price) : "-"}</TableCell>
+                              <TableCell className="text-xs text-right tabular-nums">{item.requestedQuantity || item.acceptedQuantity || "-"}</TableCell>
+                              <TableCell className="text-xs text-right tabular-nums font-semibold">{item.totalAmount ? formatCurrency(item.totalAmount) : "-"}</TableCell>
+                              <TableCell className="text-xs text-right tabular-nums">{item.rebate || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "supplier" && hasSupplier && (
+              <div className="space-y-4" data-testid="tab-content-supplier">
+                <Card>
+                  <CardContent className="p-5 space-y-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier Information</p>
+                    {content.supplier.name && <DetailRow icon={Building2} label="Name" value={content.supplier.name} testId="text-supplier-name" />}
+                    {content.supplier.warehouseZip && <DetailRow icon={MapPin} label="Warehouse Zip" value={content.supplier.warehouseZip} />}
+                    {content.supplier.phone && (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground/70" />
+                          <p className="text-sm text-muted-foreground">Phone</p>
+                        </div>
+                        <a href={`tel:${content.supplier.phone}`} className="text-sm font-medium text-right underline" data-testid="link-supplier-phone">{content.supplier.phone}</a>
+                      </div>
+                    )}
+                    {content.supplier.email && (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Mail className="w-3.5 h-3.5 text-muted-foreground/70" />
+                          <p className="text-sm text-muted-foreground">Email</p>
+                        </div>
+                        <a href={`mailto:${content.supplier.email}`} className="text-sm font-medium text-right underline" data-testid="link-supplier-email">{content.supplier.email}</a>
+                      </div>
+                    )}
+                    {content.supplier.fax && <DetailRow icon={Phone} label="Fax" value={content.supplier.fax} />}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === "customer" && (
+              <div className="space-y-4" data-testid="tab-content-customer">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
+                      {content?.customer?.name && <DetailRow icon={User} label="Name" value={content.customer.name} testId="text-customer-name" />}
+                      {content?.customer?.id && <DetailRow icon={Hash} label="ID" value={content.customer.id} />}
+                      {content?.customer?.email && <DetailRow icon={Mail} label="Email" value={content.customer.email} />}
+                      <DetailRow icon={MapPin} label="Address" value={content?.customer ? [content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || "-" : "-"} />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship To</p>
+                        {content?.shipTo?.name && content?.customer?.name && content.shipTo.name === content.customer.name && (
+                          <Badge variant="secondary" className="text-[10px]" data-testid="badge-same-as-customer">Same as Customer</Badge>
+                        )}
+                      </div>
+                      {content?.shipTo?.name && <DetailRow icon={User} label="Name" value={content.shipTo.name} />}
+                      {content?.shipTo?.locationCode && <DetailRow icon={Hash} label="Location Code" value={content.shipTo.locationCode} />}
+                      <DetailRow icon={MapPin} label="Address" value={content?.shipTo ? [content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || "-" : "-"} />
+                      {content?.shipTo?.email && <DetailRow icon={Mail} label="Email" value={content.shipTo.email} />}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bill To</p>
+                      {content?.billTo?.name && <DetailRow icon={User} label="Name" value={content.billTo.name} />}
+                      <DetailRow icon={MapPin} label="Address" value={content?.billTo ? [content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || "-" : "-"} />
+                      {content?.billTo?.email && <DetailRow icon={Mail} label="Email" value={content.billTo.email} />}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "documents" && (
+              <div className="space-y-4" data-testid="tab-content-documents">
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <p className="text-sm font-semibold">Packing Slip</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{content?.packingSlipUrl ? "Available for download" : "No packing slip available"}</p>
+                      </div>
+                      {content?.packingSlipUrl && (
+                        <a href={content.packingSlipUrl} target="_blank" rel="noopener noreferrer" data-testid="link-packing-slip">
+                          <Button variant="outline" size="sm">
+                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                            Download
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <p className="text-sm font-semibold">PO Content</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{order.poContent ? "Purchase order data available" : "No PO content available"}</p>
+                      </div>
+                      {order.poContent && (
+                        <Button variant="outline" size="sm" onClick={() => setDocDialog({ open: true, title: "PO Content", content: order.poContent })} data-testid="button-view-po-content">
+                          <Eye className="w-3.5 h-3.5 mr-1.5" />
+                          View
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <p className="text-sm font-semibold">Invoice</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{order.invoiceContent ? "Invoice data available" : "No invoice generated yet"}</p>
+                      </div>
+                      {order.invoiceContent && (
+                        <Button variant="outline" size="sm" onClick={() => setDocDialog({ open: true, title: "Invoice Content", content: order.invoiceContent })} data-testid="button-view-invoice-content">
+                          <Eye className="w-3.5 h-3.5 mr-1.5" />
+                          View
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <ContentViewerDialog
+                  open={docDialog.open}
+                  onClose={() => setDocDialog({ open: false, title: "", content: null })}
+                  title={docDialog.title}
+                  titleIcon={docDialog.title.includes("Invoice") ? Receipt : ClipboardList}
+                  content={docDialog.content}
+                  rawContent={docDialog.content}
+                  accentColor={docDialog.title.includes("Invoice") ? "emerald" : "blue"}
+                />
+              </div>
+            )}
+
+            {activeTab === "invoices" && hasInvoice && (
+              <div className="space-y-4" data-testid="tab-content-invoices">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <InfoCard icon={FileText} label="Invoice Number" value={invoiceMeta.number} accent="bg-teal-500/10" testId="text-invoice-number" />
+                  <InfoCard icon={Calendar} label="Invoice Date" value={formatDate(invoiceMeta.date)} accent="bg-teal-500/10" />
+                  {invoiceData?.shipDate && <InfoCard icon={Truck} label="Ship Date" value={formatDate(invoiceData.shipDate)} accent="bg-teal-500/10" />}
+                  {invoiceData?.storeNumber && <InfoCard icon={Building2} label="Store Number" value={invoiceData.storeNumber} accent="bg-teal-500/10" />}
+                </div>
+
+                {trackingNumbers.length > 0 && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Truck className="w-3.5 h-3.5 text-muted-foreground" />
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Tracking Numbers</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {trackingNumbers.map((t: string, i: number) => (
+                        <Badge key={i} variant="secondary" className="font-mono text-xs" data-testid={`badge-tracking-${i}`}>{t.replace("Tracking:", "")}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {invoiceLines.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Invoice Line Items</p>
+                    <LineItemsTable items={invoiceLines} />
+                  </div>
+                )}
+
+                {invoiceTotal && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <DollarSign className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                        <p className="text-xl font-bold" data-testid="text-invoice-total">{formatCurrency(invoiceTotal.amount)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Invoice Total</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <DollarSign className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+                        <p className="text-xl font-bold" data-testid="text-invoice-net">{formatCurrency(invoiceTotal.netAmount)}</p>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Net Amount</p>
-                      </div>
-                    </div>
-                  )}
-                  {trackingNumbers.length > 0 && (
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Truck className="w-3.5 h-3.5 text-muted-foreground" />
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Tracking Numbers</p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {trackingNumbers.map((t: string, i: number) => (
-                          <Badge key={i} variant="secondary" className="font-mono text-xs">{t.replace("Tracking:", "")}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {invoiceData?.shipDate && <InfoCard icon={Calendar} label="Ship Date" value={formatDate(invoiceData.shipDate)} accent="bg-emerald-500/10" />}
-                  {invoiceData?.storeNumber && <InfoCard icon={Building2} label="Store Number" value={invoiceData.storeNumber} accent="bg-emerald-500/10" />}
-                </div>
-              )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
-              {activeTab === "items" && (
-                <div className="space-y-4" data-testid="tab-content-items">
-                  {allLineItems.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15">
-                          <Package className="w-3 h-3 text-amber-600" />
+                {invoiceTotal && content?.totalAmount && (
+                  (() => {
+                    const invAmt = parseFloat(invoiceTotal.amount || "0") || 0;
+                    const poAmt = parseFloat(content.totalAmount || "0") || 0;
+                    if (invAmt > 0 && poAmt > 0 && Math.abs(invAmt - poAmt) > 0.01) {
+                      return (
+                        <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50" data-testid="alert-invoice-discrepancy">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Discrepancy Detected</p>
+                          </div>
+                          <p className="text-sm mt-1">Invoice total ({formatCurrency(invAmt)}) does not match PO total ({formatCurrency(poAmt)}). Difference: {formatCurrency(Math.abs(invAmt - poAmt))}</p>
                         </div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          {invoiceLines.length > 0 ? "Invoice" : "Order"} Items
-                        </p>
-                        <Badge variant="secondary" className="text-[10px]">{allLineItems.length}</Badge>
-                      </div>
-                      <LineItemsTable items={allLineItems} />
-                    </div>
-                  )}
-                  {poLines.length > 0 && (
-                    <div>
-                      {allLineItems.length > 0 && <Separator className="mb-4" />}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/15">
-                          <ClipboardList className="w-3 h-3 text-indigo-600" />
-                        </div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">PO Items</p>
-                        <Badge variant="secondary" className="text-[10px]">{poLines.length}</Badge>
-                      </div>
-                      <LineItemsTable items={poLines} />
-                    </div>
-                  )}
-                </div>
-              )}
+                      );
+                    }
+                    return null;
+                  })()
+                )}
+              </div>
+            )}
 
-              {activeTab === "history" && (
-                <div data-testid="tab-content-history">
-                  <OrderHistoryTimeline orderId={orderId} />
-                </div>
-              )}
+            {activeTab === "activity" && (
+              <div data-testid="tab-content-activity">
+                <OrderHistoryTimeline orderId={orderId} />
+              </div>
+            )}
           </div>
         </div>
       ) : (

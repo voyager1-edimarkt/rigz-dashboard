@@ -44,6 +44,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Comprehensive 9-tab order detail page: Overview (summary cards, timeline, metadata), Order Details (deep dive), Line Items (filter/sort/stats), Financials (summary + breakdown), Supplier, Customer & Shipping, Documents (viewer dialogs), Invoices (conditional with discrepancy warning), Activity Log
 - 2026-02-13: Replaced inline inbound/outbound content with Dialog modal that parses EDI 850 data and JSON into human-readable cards/tables, with raw data toggle and copy button
 - 2026-02-13: Added order history (order_data table) to order detail sheet with timeline view showing status changes and expandable inbound/outbound content
 - 2026-02-13: Changed order detail from modal dialog to side sheet (matching customers page)
