@@ -1,0 +1,622 @@
+https://rigz.odoo.com/jsonrpc
+ 
+U : anshumanbezbaruah@edimarkt.com.au
+ 
+P ; ce8caa9f95e8d6479542da69374b076138e9a181
+ 
+API :
+ 
+/**
+
+	Modify the description here. Modify the function name and parameters as needed. One function per
+
+	template is recommended; create a new code template for each new function.
+
+	product
+
+	saleOrder
+
+	purchaseOrder
+ 
+	{
+
+		search(): Array,
+
+		create(): number,
+
+		update(): number
+
+	}
+ 
+	@param {String} arg1 - arg1 description
+
+	@return {String} return description
+
+*/
+
+function odoo() {
+
+	var uid = null;
+ 
+	var getVar = function(varName){
+
+		var mode = getOperatingMode("ODOO");
+
+		var res = $cfg(varName + "_" + mode);
+
+		if(!res){
+
+			logger.warn("Could not locate a value for variable " + varName + "_" + mode);
+
+			return "";
+
+		}
+
+		return res;
+
+	}
+ 
+	var auth = function(){
+
+		if(uid != null){
+
+			return uid;
+
+		}
+
+		var resp = sendHTTPRequest("GET", getVar("ODOO_URL") + "", {
+
+		    "jsonrpc": "2.0",
+
+		    "method": "call",
+
+		    "params": {
+
+		        "service": "common",
+
+		        "method": "authenticate",
+
+		        "args": [
+
+		        	  getVar("ODOO_DB") + "",
+
+		            getVar("ODOO_USER") + "",
+
+		            getVar("ODOO_PWD") + "",
+
+		            {}
+
+		        ]
+
+		    }
+
+		});
+
+		if(!resp.success){
+
+			throw new Error("Could not authenticate to Odoo:\n" + JSON.stringify(resp, null, 2));
+
+		}
+
+		uid = resp.body.result
+
+		logger.info("Determined user " + uid);
+
+		return uid;
+
+	}
+ 
+	var request = function(method, entity, action, payload, kwargs){
+
+		auth();
+
+		var resp = sendHTTPRequest(method, getVar("ODOO_URL") + "", {
+
+		    "jsonrpc": "2.0",
+
+		    "method": "call",
+
+		    "params": {
+
+		        "service": "object",
+
+		        "method": "execute_kw",
+
+		        "args": [
+
+		            getVar("ODOO_DB"),
+
+		            uid,
+
+		            getVar("ODOO_PWD"),
+
+		            entity,
+
+		            action,
+
+		            payload
+
+		        ],
+
+		        "kwargs": kwargs ? kwargs : undefined,
+
+		        "id": DateUtil.getCurrentDate("yyyyMMddHHmmssSSS") + ""
+
+		    }
+
+		});
+
+		if(!resp.success){
+
+			throw new Error("Could not execute " + action + " for entity " + entity + ":\n" + JSON.stringify(resp, null, 2));
+
+		}
+
+		if(resp.body.error){
+
+			throw new Error("Received error from server: " + resp.body.error.data.message);
+
+		}
+
+		return resp.body;
+
+	};
+ 
+	var update = function(entity, payload){
+
+		if(!entity){
+
+			throw new Error("No Entity type provided");
+
+		}
+
+		if(!payload){
+
+			throw new Error("No payload provided");
+
+		}
+
+		if(!payload.id){
+
+			throw new Error("Payload must contain id");
+
+		}
+
+		var id = parseInt(payload.id + "");
+
+		delete payload.id;
+
+		var resp = request("POST", entity, "write", [
+
+			[id],
+
+			payload
+
+		]);
+
+		payload.id = id;
+
+		return resp;
+
+	}
+ 
+	var create = function(entity, payload){
+
+		if(!entity){
+
+			throw new Error("No Entity type provided");
+
+		}
+
+		if(!payload){
+
+			throw new Error("No payload provided");
+
+		}
+
+		var resp = request("POST", entity, "create", [
+
+		            	payload
+
+		            ]);
+
+		return resp;
+
+	}
+ 
+	var load = function(entity, ids){
+
+		auth();
+
+		var resp = request("POST", entity, "read", ids);
+
+		return resp;
+
+	}
+ 
+	var search = function(entity, filters, fields, pageNo, pageSize){
+
+		auth();
+
+		var resp = sendHTTPRequest("GET", getVar("ODOO_URL") + "", {
+
+		    "jsonrpc": "2.0",
+
+		    "method": "call",
+
+		    "params": {
+
+		        "service": "object",
+
+		        "method": "execute_kw",
+
+		        "args": [
+
+		            getVar("ODOO_DB"),
+
+		            uid,
+
+		            getVar("ODOO_PWD"),
+
+		            entity,
+
+		            "search_read",
+
+		            [filters || []],
+
+		            {
+
+		            	"fields": fields, 
+
+		            	"offset": pageNo || undefined, 
+
+		            	"limit": pageSize || undefined
+
+		            }
+
+		        ],
+
+		        "id": DateUtil.getCurrentDate("yyyyMMddHHmmssSSS") + ""
+
+		    }
+
+		});
+
+		if(!resp.success){
+
+			throw new Error("Could not search Odoo entity " +  + ":\n" + JSON.stringify(resp, null, 2));
+
+		}
+
+		if(resp.body.error){
+
+			throw new Error("Received error from server: " + resp.body.error.data.message);
+
+		}
+
+		return resp.body;
+
+	}
+ 
+	var buildEndpoint = function(entity, fields, includeCreate, includeUpdate, action1, action2, action3){
+
+		var endpoint = {
+
+			search: function(filters){
+
+				var resp = search(entity, filters, fields);
+
+				return resp.result;
+
+			},
+
+			load: function(ids){
+
+				var resp = load(entity, ids);
+
+				return resp.result;
+
+			},
+
+			action: function(action,args){
+
+				var resp = request("POST", entity, action, args || []);
+
+				return resp.result;
+
+			}
+
+		};
+
+		if(includeCreate){
+
+			endpoint.create = function(payload){
+
+				var resp = create(entity, payload);
+
+				if(isNaN(resp.result)){
+
+					throw new Error("Could not create Odoo entity " + entity + ": \n" + JSON.stringify(resp));
+
+				}
+
+				return resp.result;
+
+			};
+
+		}		
+
+		if(includeUpdate){
+
+			endpoint.update = function(payload){
+
+				var resp = update(entity, payload);
+
+				if(resp.result != true){
+
+					throw new Error("Could not update Odoo entity " + entity + ": \n" + JSON.stringify(resp));
+
+				}
+
+				return payload.id;
+
+			};
+
+		}
+
+		if(action1){
+
+			endpoint[action1] = function(args){
+
+				var resp = request("GET", entity, "action_" + action1, args || []);
+
+				return resp.return;
+
+			}
+
+		}
+
+		if(action2){
+
+			endpoint[action2] = function(args){
+
+				var resp = request("GET", entity, "action_" + action2, args || []);
+
+				return resp.return;
+
+			}
+
+		}
+
+		if(action3){
+
+			endpoint[action3] = function(args){
+
+				var resp = request("GET", entity, "action_" + action3, args || []);
+
+				return resp.return;
+
+			}
+
+		}
+
+		return endpoint;
+
+	}
+
+	return{
+
+		saleOrder: buildEndpoint("sale.order", ["partner_id", "partner_invoice_id", "partner_shipping_id", "date_order", "order_line", "name", "picking_ids", "invoice_ids"], true, true, "confirm"),
+
+		purchaseOrder: buildEndpoint("purchase.order", [], true, true),
+
+		purchaseOrderLine: buildEndpoint("purchase.order.line", [], false, false),
+
+		partner: buildEndpoint("res.partner", [], true, true),
+
+		product: buildEndpoint("product.template", ["name", "description", "active", "default_code"], true, true),
+
+		productSupplierInfo: buildEndpoint("product.supplierinfo", [], true, false),
+
+		priceList: buildEndpoint("product.pricelist", ["name", "currency_id"], true, true),
+
+		priceListItem: buildEndpoint("product.pricelist.item", ["name", "currency_id"], true, true),
+
+		forEntity: function(entity, fields){
+
+			return buildEndpoint(entity, fields || [], true, true);
+
+		},
+
+		reset: function(){
+
+			uid = null;
+
+		},
+
+		request: request
+
+	}
+
+}
+ 
+Send Request :
+ 
+/**
+
+	Send HTTP request
+ 
+	@param {Any} method - 
+
+	@param {Any} url - 
+
+	@param {Any} payload - 
+
+	@return {Any} 
+
+*/
+
+function sendHTTPRequest(method, url, payload){
+
+	importPackage(org.apache.http.client.methods);
+
+	importPackage(org.apache.http.entity.mime);
+
+	importPackage(org.apache.http.impl.client);
+
+	importPackage(org.apache.http.entity);
+
+	importPackage(org.apache.http.util);
+
+	var client = HttpClients.createDefault();
+
+	var url = url;
+
+	var request = null;
+
+	logger.info(JSON.stringify(payload));
+
+	try{
+
+		switch(method){
+
+			case 'POST':
+
+				request = RequestBuilder.post(url).setEntity(new StringEntity(JSON.stringify(payload)));
+
+				break;
+
+			case 'PUT':
+
+				request = RequestBuilder.put(url).setEntity(new StringEntity(JSON.stringify(payload)));
+
+				break;
+
+			case 'GET':
+
+				request = RequestBuilder.get(url);
+
+				if(payload){
+
+					request.setEntity(new StringEntity(JSON.stringify(payload)))
+
+				}
+
+				break;
+
+		}
+
+		request = request.setHeader("Accept", "application/json")
+
+		.setHeader("Content-Type", "application/json")
+
+		.build();
+
+		var r = client.execute(request);
+
+		java.lang.Thread.sleep(200);
+
+		var status = r.getStatusLine().getStatusCode();
+
+		var responseContent = EntityUtils.toString(r.getEntity()) + "";
+
+		logger.info("status " + r.getStatusLine() + " " + responseContent);
+
+		if(status > 299){
+
+			var body = responseContent;
+
+			try{
+
+				body = JSON.parse(responseContent);
+
+			}catch(e){}
+
+			return {
+
+				success: false,
+
+				status: status,
+
+				body: body
+
+			};
+
+		}
+
+		resp = JSON.parse(responseContent);
+
+		return {
+
+			success: true,
+
+			status: status,
+
+			body: resp
+
+		};
+
+	}finally{
+
+		if(client){
+
+			client.close();
+
+		}
+
+	}
+
+}
+ 
+Utils :
+ 
+/**
+
+	Modify the description here. Modify the function name and parameters as needed. One function per
+
+	template is recommended; create a new code template for each new function.
+ 
+	@param {String} arg1 - arg1 description
+
+	@return {String} return description
+
+*/
+
+function isEmpty(val) {
+
+	return !val || ["null", "undefined"].indexOf(val) > -1;
+
+}
+ 
+PO Reader : 
+ 
+var client = odoo();
+
+var pos = client.purchaseOrder.search([["x_studio_sent_to_middleware", "=", 0], ["state", "=", "purchase"]]);
+
+var source = new java.util.ArrayList();
+
+for(var i = 0; i < pos.length; i++){
+
+	source.add(JSON.stringify(pos[i]));
+
+}
+
+return source;
+ 
+Invoice reader : 
+ 
+var client = odoo();
+
+var pos = client.forEntity("account.move").search([["invoice_origin", "!=", false],["x_studio_sent_to_middleware", "=", 0], ["state", "=", "posted"], ["move_type", "=", "out_invoice"]]);
+
+var source = new java.util.ArrayList();
+
+for(var i = 0; i < pos.length; i++){
+
+	source.add(JSON.stringify(pos[i]));
+
+}
+
+return source;
+ 
