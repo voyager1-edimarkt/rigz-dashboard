@@ -969,25 +969,19 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
 
   return (
     <div className="flex flex-col h-full overflow-auto" data-testid="page-order-detail">
-      <div className="p-4 pb-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/orders")} data-testid="button-back-orders">
-          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
-          Back to Orders
-        </Button>
-      </div>
       {isLoading ? (
         <div className="p-6 space-y-5">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-14 w-14 rounded-xl" />
+            <Skeleton className="h-10 w-10 rounded-full" />
             <div className="space-y-2 flex-1">
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-4 w-32" />
             </div>
           </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-24 rounded-full" />
-            <Skeleton className="h-8 w-20 rounded-full" />
-            <Skeleton className="h-8 w-28 rounded-full" />
+          <div className="flex gap-4">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-28" />
           </div>
           <div className="space-y-3 pt-2">
             <Skeleton className="h-14 w-full rounded-lg" />
@@ -996,43 +990,57 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
           </div>
         </div>
       ) : order ? (
-        <div className="px-4 pb-6">
-          <div className="pb-4 border-b mb-5 px-5 pt-5">
-            <div className="flex items-center gap-4 pb-3">
-              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
-                <ShoppingCart className="w-6 h-6 text-white" />
+        <div className="pb-6">
+          <div className="px-6 pt-5 pb-0">
+            <div className="flex items-center gap-3 pb-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/orders")} data-testid="button-back-orders">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 shrink-0">
+                <ShoppingCart className="w-4.5 h-4.5 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-xl font-bold" data-testid="text-detail-order-number">
+                <h1 className="text-lg font-semibold" data-testid="text-detail-order-number">
                   Order #{order.orderNumber}
                 </h1>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {order.id}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] font-semibold ${statusCfg?.color}`}
+                    data-testid="badge-detail-status"
+                  >
+                    <StatusIcon className="w-3 h-3 mr-1" />
+                    {statusCfg?.label}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 pb-4 flex-wrap">
-              <Badge
-                variant="outline"
-                className={`text-xs font-semibold ${statusCfg?.color}`}
-                data-testid="badge-detail-status"
-              >
-                <StatusIcon className="w-3 h-3 mr-1" />
-                {statusCfg?.label}
-              </Badge>
-              {order.purchaseOrderNumber && (
-                <Badge variant="outline" className="text-xs" data-testid="badge-detail-po">
-                  <FileText className="w-3 h-3 mr-1" />
-                  PO: {order.purchaseOrderNumber}
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-xs bg-muted/50">
-                <MapPin className="w-3 h-3 mr-1" />
-                {order.country}
-              </Badge>
+          </div>
+          <div className="border-b px-6">
+            <div className="flex items-center gap-1 flex-wrap">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+                      isActive
+                        ? "border-foreground text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-            <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
           </div>
 
-          <div className="py-2">
+          <div className="px-6 pt-4">
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
