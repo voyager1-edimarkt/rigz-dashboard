@@ -80,6 +80,7 @@ interface OrderStats {
   recentByDay: { day: string; cnt: number }[];
 }
 
+
 interface OrderDetail extends OrderRow {
   content: string;
   poContent: string;
@@ -547,10 +548,6 @@ export default function Orders() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const limit = 25;
 
-  const { data: stats, isLoading: statsLoading } = useQuery<OrderStats>({
-    queryKey: ["/api/orders/stats"],
-  });
-
   const queryParams = new URLSearchParams();
   queryParams.set("limit", String(limit));
   queryParams.set("offset", String(page * limit));
@@ -578,8 +575,6 @@ export default function Orders() {
   const totalRows = orders?.total ?? 0;
   const totalPages = Math.ceil(totalRows / limit);
 
-  const topStatuses = stats?.byStatus.slice(0, 4) || [];
-
   return (
     <div className="flex flex-col h-full gap-4 p-4 overflow-auto" data-testid="page-orders">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -595,60 +590,6 @@ export default function Orders() {
         <Button size="icon" variant="ghost" onClick={handleRefresh} data-testid="button-refresh-orders">
           <RefreshCw className="w-4 h-4" />
         </Button>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card data-testid="card-total-orders">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-blue-500/15">
-                <ShoppingCart className="w-4 h-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Orders</p>
-                {statsLoading ? (
-                  <Skeleton className="h-6 w-16 mt-0.5" />
-                ) : (
-                  <p className="text-lg font-bold" data-testid="text-total-orders">{stats?.total.toLocaleString()}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {topStatuses.map((s, i) => {
-          const cfg = getStatusConfig(s.status);
-          const StatusIcon = cfg.icon;
-          const bgColors = [
-            "bg-emerald-500/15",
-            "bg-violet-500/15",
-            "bg-amber-500/15",
-          ];
-          const iconColors = [
-            "text-emerald-600",
-            "text-violet-600",
-            "text-amber-600",
-          ];
-          return (
-            <Card key={s.status} data-testid={`card-status-${s.status}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`flex items-center justify-center w-9 h-9 rounded-md ${bgColors[i] || "bg-gray-500/15"}`}>
-                    <StatusIcon className={`w-4 h-4 ${iconColors[i] || "text-gray-600"}`} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{cfg.label}</p>
-                    {statsLoading ? (
-                      <Skeleton className="h-6 w-16 mt-0.5" />
-                    ) : (
-                      <p className="text-lg font-bold" data-testid={`text-status-count-${s.status}`}>{s.cnt.toLocaleString()}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
       </div>
 
       <Card className="flex-1 flex flex-col min-h-0">

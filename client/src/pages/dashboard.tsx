@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   ComposableMap,
   Geographies,
   Geography,
 } from "react-simple-maps";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const US_TOPO_URL = "/states-10m.json";
 const CA_GEO_URL = "/canada-provinces.json";
@@ -44,6 +45,34 @@ interface CustomerStats {
   byProvince: { province: string; cnt: number }[];
 }
 
+interface OrderStats {
+  total: number;
+  byStatus: { status: string; cnt: number }[];
+  recentByDay: { day: string; cnt: number }[];
+}
+
+const ORDER_STATUS_COLORS: Record<string, string> = {
+  PO_RECEIVED: "#3b82f6",
+  PO_SENT: "#6366f1",
+  INVOICE_SENT: "#8b5cf6",
+  INVOICE_RECEIPT: "#10b981",
+  INVOICE_RECEIVED: "#14b8a6",
+  FULFILLMENT_READY: "#06b6d4",
+  CANCELLED: "#ef4444",
+  BILL_SENT: "#f59e0b",
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  PO_RECEIVED: "PO Received",
+  PO_SENT: "PO Sent",
+  INVOICE_SENT: "Invoice Sent",
+  INVOICE_RECEIPT: "Invoice Receipt",
+  INVOICE_RECEIVED: "Invoice Received",
+  FULFILLMENT_READY: "Fulfillment Ready",
+  CANCELLED: "Cancelled",
+  BILL_SENT: "Bill Sent",
+};
+
 function getColorUS(count: number, max: number): string {
   if (count === 0) return "#f1f5f9";
   const ratio = count / max;
@@ -66,9 +95,24 @@ function getColorCA(count: number, max: number): string {
   return "#a7f3d0";
 }
 
+function OrderPieTooltip({ active, payload }: any) {
+  if (!active || !payload?.[0]) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-background border rounded-lg shadow-lg px-3 py-2">
+      <p className="text-sm font-semibold" style={{ color: d.color }}>{d.label}</p>
+      <p className="text-xs text-muted-foreground">{d.cnt.toLocaleString()} orders ({d.pct}%)</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<CustomerStats>({
     queryKey: ["/api/customers/stats"],
+  });
+
+  const { data: orderStats, isLoading: orderStatsLoading } = useQuery<OrderStats>({
+    queryKey: ["/api/orders/stats"],
   });
 
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
@@ -97,6 +141,18 @@ export default function Dashboard() {
   const usCount = stats?.byCountry.find((c) => c.country === "US")?.cnt ?? 0;
   const caCount = stats?.byCountry.find((c) => c.country === "CA")?.cnt ?? 0;
 
+  const pieData = useMemo(() => {
+    if (!orderStats?.byStatus) return [];
+    const total = orderStats.total || 1;
+    return orderStats.byStatus.map((s) => ({
+      name: s.status,
+      label: ORDER_STATUS_LABELS[s.status] || s.status,
+      cnt: s.cnt,
+      pct: ((s.cnt / total) * 100).toFixed(1),
+      color: ORDER_STATUS_COLORS[s.status] || "#94a3b8",
+    }));
+  }, [orderStats]);
+
   return (
     <div className="h-full overflow-auto p-6" data-testid="page-dashboard">
       <div className="flex items-center gap-3 mb-6">
@@ -109,7 +165,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Card data-testid="card-us-map">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1">
             <div className="flex items-center gap-2">
@@ -252,6 +308,65 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card data-testid="card-order-status-chart">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Order Status Distribution</CardTitle>
+          </div>
+          <Badge variant="outline" data-testid="badge-total-orders">
+            {orderStats?.total.toLocaleString() ?? "..."} total
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          {orderStatsLoading ? (
+            <div className="flex items-center justify-center h-[260px]">
+              <Skeleton className="w-[220px] h-[220px] rounded-full" />
+            </div>
+          ) : pieData.length > 0 ? (
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-[280px] h-[280px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={120}
+                      paddingAngle={2}
+                      dataKey="cnt"
+                      strokeWidth={2}
+                      stroke="hsl(var(--background))"
+                    >
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<OrderPieTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-2">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2.5 py-1.5" data-testid={`legend-${entry.name}`}>
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{entry.label}</p>
+                      <p className="text-xs text-muted-foreground">{entry.cnt.toLocaleString()} ({entry.pct}%)</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-muted-foreground">No order data available</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
