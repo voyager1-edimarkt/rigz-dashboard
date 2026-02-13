@@ -155,13 +155,13 @@ function InfoCard({ icon: Icon, label, value, accent, testId }: { icon: any; lab
   const bg = accent || "bg-muted/60";
   const iconColor = accent ? accent.replace("bg-", "text-").replace("/10", "") : "text-muted-foreground";
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-      <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${bg} shrink-0`}>
-        <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+    <div className="flex items-start gap-3 p-4 rounded-md border bg-card">
+      <div className={`flex items-center justify-center w-9 h-9 rounded-full ${bg} shrink-0 mt-0.5`}>
+        <Icon className={`w-4 h-4 ${iconColor}`} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{label}</p>
-        <p className="text-sm font-medium mt-0.5 break-words" data-testid={testId}>{value || "-"}</p>
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
+        <p className="text-base font-semibold mt-1 break-words" data-testid={testId}>{value || "-"}</p>
       </div>
     </div>
   );
@@ -1042,30 +1042,29 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
 
           <div className="px-6 pt-4">
               {activeTab === "order" && (
-                <div className="space-y-3" data-testid="tab-content-order">
+                <div className="space-y-4" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
                     <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
                     <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
                     <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
                   </div>
-                  <Separator className="my-1" />
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pt-1">Timeline</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50 text-center">
-                      <Calendar className="w-4 h-4 mx-auto text-red-500 mb-1" />
-                      <p className="text-xs font-bold">{formatDate(order.orderDate)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Order Date</p>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pt-3">Timeline</p>
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    <div className="p-4 rounded-md border bg-card text-center">
+                      <Calendar className="w-5 h-5 mx-auto text-red-500 mb-2" />
+                      <p className="text-sm font-semibold">{formatDate(order.orderDate)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Order Date</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50 text-center" data-testid="text-detail-created">
-                      <Calendar className="w-4 h-4 mx-auto text-emerald-500 mb-1" />
-                      <p className="text-xs font-bold">{formatDate(order.createdAt)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Created</p>
+                    <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-created">
+                      <Calendar className="w-5 h-5 mx-auto text-emerald-500 mb-2" />
+                      <p className="text-sm font-semibold">{formatDate(order.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Created</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50 text-center" data-testid="text-detail-updated">
-                      <Calendar className="w-4 h-4 mx-auto text-amber-500 mb-1" />
-                      <p className="text-xs font-bold">{formatDate(order.updatedAt)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Updated</p>
+                    <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-updated">
+                      <Calendar className="w-5 h-5 mx-auto text-amber-500 mb-2" />
+                      <p className="text-sm font-semibold">{formatDate(order.updatedAt)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Updated</p>
                     </div>
                   </div>
                   {order.statusMessage && (
