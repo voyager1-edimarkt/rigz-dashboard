@@ -93,7 +93,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>MySQL Data</SidebarGroupLabel>
+          <SidebarGroupLabel>Legacy Data</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
