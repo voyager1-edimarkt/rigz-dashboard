@@ -86,7 +86,7 @@ function AppContent() {
                 )}
               </Route>
               <Route path="/query">
-                <QueryRunner database={selectedDatabase} />
+                <QueryRunner database={null} />
               </Route>
               <Route component={NotFound} />
             </Switch>
