@@ -197,6 +197,81 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/orders", async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 25, 100);
+      const offset = Number(req.query.offset) || 0;
+      const search = (req.query.search as string) || "";
+      const status = (req.query.status as string) || "";
+
+      let where = "WHERE 1=1";
+      const params: any[] = [];
+      if (search) {
+        where += " AND (o.orderNumber LIKE ? OR o.crmId LIKE ?)";
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      if (status) {
+        where += " AND o.status = ?";
+        params.push(status);
+      }
+
+      const countResult = await queryNoDb(
+        `SELECT COUNT(*) as total FROM runtime.orders o ${where}`,
+        params
+      );
+      const total = Number((countResult as any[])[0]?.total ?? 0);
+
+      const rows = await queryNoDb(
+        `SELECT o.id, o.\`index\`, o.orderNumber, o.vendor, o.country, o.orderDate, o.crmId, o.status, o.statusMessage, o.channel, o.test, o.createdAt, o.updatedAt, o.purchaseOrderNumber
+         FROM runtime.orders o ${where}
+         ORDER BY o.createdAt DESC
+         LIMIT ${limit} OFFSET ${offset}`,
+        params
+      );
+
+      res.json({ rows, total });
+    } catch (err: any) {
+      log(`Error fetching orders: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/orders/stats", async (_req, res) => {
+    try {
+      const [totalResult, statusResult, recentByDay] = await Promise.all([
+        queryNoDb("SELECT COUNT(*) as total FROM runtime.orders"),
+        queryNoDb("SELECT status, COUNT(*) as cnt FROM runtime.orders GROUP BY status ORDER BY cnt DESC"),
+        queryNoDb("SELECT DATE(orderDate) as day, COUNT(*) as cnt FROM runtime.orders WHERE orderDate >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY DATE(orderDate) ORDER BY day DESC LIMIT 30"),
+      ]);
+
+      res.json({
+        total: Number((totalResult as any[])[0]?.total ?? 0),
+        byStatus: statusResult,
+        recentByDay: recentByDay,
+      });
+    } catch (err: any) {
+      log(`Error fetching order stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/orders/:id", async (req, res) => {
+    try {
+      const rows = await queryNoDb(
+        `SELECT * FROM runtime.orders WHERE id = ?`,
+        [req.params.id]
+      );
+      const order = (rows as any[])[0];
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (err: any) {
+      log(`Error fetching order detail: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);
