@@ -1,16 +1,169 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { query, queryNoDb, testConnection } from "./mysql";
+import { queryRequestSchema } from "@shared/schema";
+import { log } from "./index";
+
+function sanitizeIdentifier(name: string): string | null {
+  if (!name || !/^[a-zA-Z0-9_]+$/.test(name)) {
+    return null;
+  }
+  return name;
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  app.get("/api/connection/status", async (_req, res) => {
+    try {
+      const status = await testConnection();
+      res.json(status);
+    } catch (err: any) {
+      res.json({ connected: false, error: err.message });
+    }
+  });
+
+  app.get("/api/databases", async (_req, res) => {
+    try {
+      const rows = await queryNoDb("SHOW DATABASES");
+      const databases = (rows as any[])
+        .map((r: any) => ({ name: r.Database }))
+        .filter((db: any) => !["information_schema", "performance_schema", "sys"].includes(db.name));
+      res.json(databases);
+    } catch (err: any) {
+      log(`Error listing databases: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/databases/:database/tables", async (req, res) => {
+    const { database } = req.params;
+    try {
+      const rows = await queryNoDb(
+        `SELECT TABLE_NAME as name, TABLE_TYPE as type, TABLE_ROWS as \`rows\`, ENGINE as engine
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = ?
+         ORDER BY TABLE_NAME`,
+        [database]
+      );
+      const tables = (rows as any[]).map((r: any) => ({
+        name: r.name,
+        type: r.type === "BASE TABLE" ? "TABLE" : "VIEW",
+        rows: r.rows ?? 0,
+        engine: r.engine || "",
+      }));
+      res.json(tables);
+    } catch (err: any) {
+      log(`Error listing tables: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/databases/:database/tables/:table/columns", async (req, res) => {
+    const { database, table } = req.params;
+    try {
+      const rows = await queryNoDb(
+        `SELECT COLUMN_NAME as name, COLUMN_TYPE as type, IS_NULLABLE as nullable,
+                COLUMN_KEY as \`key\`, COLUMN_DEFAULT as defaultValue, EXTRA as extra
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+         ORDER BY ORDINAL_POSITION`,
+        [database, table]
+      );
+      const columns = (rows as any[]).map((r: any) => ({
+        name: r.name,
+        type: r.type,
+        nullable: r.nullable === "YES",
+        key: r.key || "",
+        defaultValue: r.defaultValue,
+        extra: r.extra || "",
+      }));
+      res.json(columns);
+    } catch (err: any) {
+      log(`Error listing columns: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/databases/:database/tables/:table/data", async (req, res) => {
+    const { database, table } = req.params;
+
+    const safeDb = sanitizeIdentifier(database);
+    const safeTable = sanitizeIdentifier(table);
+    if (!safeDb || !safeTable) {
+      return res.status(400).json({ message: "Invalid database or table name" });
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
+    try {
+      const countResult = await queryNoDb(
+        `SELECT COUNT(*) as total FROM \`${safeDb}\`.\`${safeTable}\``
+      );
+      const totalRows = Number((countResult as any[])[0]?.total ?? 0);
+
+      const rows = await queryNoDb(
+        `SELECT * FROM \`${safeDb}\`.\`${safeTable}\` LIMIT ${limit} OFFSET ${offset}`
+      );
+
+      const dataRows = rows as any[];
+      const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : [];
+
+      res.json({
+        columns,
+        rows: dataRows,
+        rowCount: totalRows,
+        executionTime: 0,
+      });
+    } catch (err: any) {
+      log(`Error fetching table data: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/query", async (req, res) => {
+    try {
+      const parsed = queryRequestSchema.parse(req.body);
+      const startTime = Date.now();
+
+      const rows = await query(parsed.sql, undefined, parsed.database);
+      const executionTime = Date.now() - startTime;
+
+      if (Array.isArray(rows)) {
+        const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+        res.json({
+          columns,
+          rows,
+          rowCount: rows.length,
+          executionTime,
+        });
+      } else {
+        res.json({
+          columns: ["affectedRows", "insertId", "info"],
+          rows: [
+            {
+              affectedRows: (rows as any).affectedRows ?? 0,
+              insertId: (rows as any).insertId ?? 0,
+              info: (rows as any).info ?? "",
+            },
+          ],
+          rowCount: 1,
+          executionTime,
+        });
+      }
+    } catch (err: any) {
+      res.status(400).json({
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        executionTime: 0,
+        error: err.message,
+      });
+    }
+  });
 
   return httpServer;
 }

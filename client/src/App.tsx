@@ -3,16 +3,66 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ConnectionBadge } from "@/components/connection-badge";
+import TableView from "@/pages/table-view";
+import QueryRunner from "@/pages/query-runner";
+import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
+import { useState } from "react";
 
-function Router() {
+function AppContent() {
+  const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+
+  const handleSelectDatabase = (db: string) => {
+    setSelectedDatabase(db);
+    setSelectedTable(null);
+  };
+
+  const style = {
+    "--sidebar-width": "17rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
   return (
-    <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar
+          selectedDatabase={selectedDatabase}
+          selectedTable={selectedTable}
+          onSelectDatabase={handleSelectDatabase}
+          onSelectTable={setSelectedTable}
+        />
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ConnectionBadge />
+            </div>
+            <ThemeToggle />
+          </header>
+          <main className="flex-1 min-h-0 overflow-hidden">
+            <Switch>
+              <Route path="/">
+                {selectedDatabase && selectedTable ? (
+                  <TableView database={selectedDatabase} table={selectedTable} />
+                ) : (
+                  <Welcome />
+                )}
+              </Route>
+              <Route path="/query">
+                <QueryRunner database={selectedDatabase} />
+              </Route>
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 
@@ -20,8 +70,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <ThemeProvider>
+          <AppContent />
+          <Toaster />
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
