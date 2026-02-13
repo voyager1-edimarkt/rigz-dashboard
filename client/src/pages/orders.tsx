@@ -64,6 +64,13 @@ import {
   LayoutList,
   Store,
   Mail,
+  Globe,
+  Phone,
+  CreditCard,
+  Tag,
+  Layers,
+  Box,
+  Ruler,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -1041,63 +1048,176 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
 
           <div className="px-6 pt-4">
               {activeTab === "order" && (
-                <div className="space-y-4" data-testid="tab-content-order">
+                <div className="space-y-6" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
                     <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
                     <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
                     <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
                   </div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pt-3">Timeline</p>
-                  <div className="grid grid-cols-3 gap-3 mt-2">
-                    <div className="p-4 rounded-md border bg-card text-center">
-                      <Calendar className="w-5 h-5 mx-auto text-red-500 mb-2" />
-                      <p className="text-sm font-semibold">{formatDate(order.orderDate)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Order Date</p>
-                    </div>
-                    <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-created">
-                      <Calendar className="w-5 h-5 mx-auto text-emerald-500 mb-2" />
-                      <p className="text-sm font-semibold">{formatDate(order.createdAt)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Created</p>
-                    </div>
-                    <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-updated">
-                      <Calendar className="w-5 h-5 mx-auto text-amber-500 mb-2" />
-                      <p className="text-sm font-semibold">{formatDate(order.updatedAt)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Updated</p>
+
+                  {content && (
+                    <>
+                      <div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {content.poNumber && <InfoCard icon={FileText} label="PO Number" value={content.poNumber} accent="bg-red-500/10" />}
+                          {content.date && <InfoCard icon={Calendar} label="Date" value={formatDate(content.date)} accent="bg-red-500/10" />}
+                          {content.plannedDeliveryDate && <InfoCard icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} accent="bg-red-500/10" />}
+                          {content.status && <InfoCard icon={Zap} label="PO Status" value={content.status} accent="bg-amber-500/10" />}
+                          {content.poType && <InfoCard icon={ClipboardList} label="PO Type" value={content.poType} accent="bg-amber-500/10" />}
+                          {content.brand && <InfoCard icon={Tag} label="Brand" value={content.brand} accent="bg-amber-500/10" />}
+                          {content.terms && <InfoCard icon={FileText} label="Terms" value={content.terms} accent="bg-amber-500/10" />}
+                          {content.shipNotBefore && <InfoCard icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} accent="bg-cyan-500/10" />}
+                          {content.shipNotAfter && <InfoCard icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} accent="bg-cyan-500/10" />}
+                          {content.shipmentDate && <InfoCard icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} accent="bg-cyan-500/10" />}
+                          {content.shipAccountNumber && <InfoCard icon={Hash} label="Ship Account #" value={content.shipAccountNumber} accent="bg-cyan-500/10" />}
+                          {content.vendorNumber && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorNumber} accent="bg-violet-500/10" />}
+                          {content.paymentMode && <InfoCard icon={CreditCard} label="Payment Mode" value={content.paymentMode} accent="bg-emerald-500/10" />}
+                          {content.allowanceOrCharge && <InfoCard icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} accent="bg-emerald-500/10" />}
+                          {content.grossAmount && <InfoCard icon={DollarSign} label="Gross Amount" value={content.grossAmount} accent="bg-emerald-500/10" />}
+                          {content.totalItems && <InfoCard icon={Layers} label="Total Items" value={content.totalItems} accent="bg-indigo-500/10" />}
+                          {content.totalAmount && <InfoCard icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} accent="bg-emerald-500/10" />}
+                          {content.priceIdentifier?.name && <InfoCard icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} accent="bg-amber-500/10" />}
+                          {content.packingSlipUrl && <InfoCard icon={FileText} label="Packing Slip" value={content.packingSlipUrl} accent="bg-slate-500/10" />}
+                        </div>
+                      </div>
+
+                      {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Supplier</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {content.supplier.name && <InfoCard icon={Building2} label="Name" value={content.supplier.name} accent="bg-orange-500/10" />}
+                            {content.supplier.warehouseZip && <InfoCard icon={MapPin} label="Warehouse Zip" value={content.supplier.warehouseZip} accent="bg-orange-500/10" />}
+                            {content.supplier.phone && <InfoCard icon={Phone} label="Phone" value={content.supplier.phone} accent="bg-orange-500/10" />}
+                            {content.supplier.email && <InfoCard icon={Mail} label="Email" value={content.supplier.email} accent="bg-orange-500/10" />}
+                            {content.supplier.fax && <InfoCard icon={Phone} label="Fax" value={content.supplier.fax} accent="bg-orange-500/10" />}
+                          </div>
+                        </div>
+                      )}
+
+                      {content.customer && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Customer</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {content.customer.name && <InfoCard icon={User} label="Name" value={content.customer.name} accent="bg-violet-500/10" />}
+                            {content.customer.id && <InfoCard icon={Hash} label="Customer ID" value={content.customer.id} accent="bg-violet-500/10" />}
+                            {content.customer.email && <InfoCard icon={Mail} label="Email" value={content.customer.email} accent="bg-violet-500/10" />}
+                            <InfoCard icon={MapPin} label="Address" accent="bg-violet-500/10" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || null} />
+                          </div>
+                        </div>
+                      )}
+
+                      {content.shipTo && (content.shipTo.name || content.shipTo.street) && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Ship To</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {content.shipTo.name && <InfoCard icon={User} label="Name" value={content.shipTo.name} accent="bg-cyan-500/10" />}
+                            {content.shipTo.locationCode && <InfoCard icon={Hash} label="Location Code" value={content.shipTo.locationCode} accent="bg-cyan-500/10" />}
+                            {content.shipTo.email && <InfoCard icon={Mail} label="Email" value={content.shipTo.email} accent="bg-cyan-500/10" />}
+                            <InfoCard icon={MapPin} label="Address" accent="bg-cyan-500/10" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || null} />
+                          </div>
+                        </div>
+                      )}
+
+                      {content.billTo && (content.billTo.name || content.billTo.street?.trim()) && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Bill To</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {content.billTo.name && <InfoCard icon={User} label="Name" value={content.billTo.name} accent="bg-indigo-500/10" />}
+                            {content.billTo.email && <InfoCard icon={Mail} label="Email" value={content.billTo.email} accent="bg-indigo-500/10" />}
+                            <InfoCard icon={MapPin} label="Address" accent="bg-indigo-500/10" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || null} />
+                          </div>
+                        </div>
+                      )}
+
+                      {content.vendorInfo && (content.vendorInfo.name || content.vendorInfo.number) && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Vendor Info</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {content.vendorInfo.name && <InfoCard icon={Store} label="Name" value={content.vendorInfo.name} accent="bg-slate-500/10" />}
+                            {content.vendorInfo.number && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorInfo.number} accent="bg-slate-500/10" />}
+                          </div>
+                        </div>
+                      )}
+
+                      {content.items && content.items.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Line Items ({content.items.length})</p>
+                          <div className="rounded-md border bg-card overflow-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs">#</TableHead>
+                                  <TableHead className="text-xs">SKU</TableHead>
+                                  <TableHead className="text-xs">Vendor #</TableHead>
+                                  <TableHead className="text-xs min-w-[200px]">Description</TableHead>
+                                  <TableHead className="text-xs text-right">Price</TableHead>
+                                  <TableHead className="text-xs text-right">Qty Req</TableHead>
+                                  <TableHead className="text-xs text-right">Qty Acc</TableHead>
+                                  <TableHead className="text-xs">UOM</TableHead>
+                                  <TableHead className="text-xs">UPC</TableHead>
+                                  <TableHead className="text-xs">Size</TableHead>
+                                  <TableHead className="text-xs text-right">Total</TableHead>
+                                  <TableHead className="text-xs">Allowances</TableHead>
+                                  <TableHead className="text-xs">Rebate</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {content.items.map((item: any, idx: number) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="text-xs">{item.itemNo || idx + 1}</TableCell>
+                                    <TableCell className="text-xs font-mono">{item.sku || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.vendorNo || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.itemDesc || "-"}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.price ? formatCurrency(item.price) : "-"}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.requestedQuantity || "-"}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.acceptedQuantity || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.uom || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.upc || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.size ? [item.size.width, item.size.height, item.size.depth].filter(Boolean).join(" x ") : "-"}</TableCell>
+                                    <TableCell className="text-xs text-right">{item.totalAmount ? formatCurrency(item.totalAmount) : "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.allowances || "-"}</TableCell>
+                                    <TableCell className="text-xs">{item.rebate || "-"}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Timeline</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-4 rounded-md border bg-card text-center">
+                        <Calendar className="w-5 h-5 mx-auto text-red-500 mb-2" />
+                        <p className="text-sm font-semibold">{formatDate(order.orderDate)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Order Date</p>
+                      </div>
+                      <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-created">
+                        <Calendar className="w-5 h-5 mx-auto text-emerald-500 mb-2" />
+                        <p className="text-sm font-semibold">{formatDate(order.createdAt)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Created</p>
+                      </div>
+                      <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-updated">
+                        <Calendar className="w-5 h-5 mx-auto text-amber-500 mb-2" />
+                        <p className="text-sm font-semibold">{formatDate(order.updatedAt)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Updated</p>
+                      </div>
                     </div>
                   </div>
+
                   {order.statusMessage && (
-                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50 mt-2">
+                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                         <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Status Message</p>
                       </div>
                       <p className="text-sm mt-1" data-testid="text-detail-status-msg">{order.statusMessage}</p>
                     </div>
-                  )}
-                  {customerInfo && (
-                    <>
-                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pt-3">Customer</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-                        <InfoCard icon={User} label="Name" value={customerInfo.name || customerInfo.companyName || "-"} accent="bg-violet-500/10" />
-                        {(customerInfo.id) && <InfoCard icon={Hash} label="Customer ID" value={customerInfo.id} accent="bg-violet-500/10" />}
-                        {(customerInfo.email) && <InfoCard icon={User} label="Email" value={customerInfo.email} accent="bg-violet-500/10" />}
-                        {(customerInfo.phone) && <InfoCard icon={User} label="Phone" value={customerInfo.phone} accent="bg-violet-500/10" />}
-                        <InfoCard
-                          icon={MapPin}
-                          label="Address"
-                          accent="bg-violet-500/10"
-                          value={[
-                            customerInfo.address?.address1 || customerInfo.address1 || customerInfo.street,
-                            customerInfo.address?.address2 || customerInfo.address2,
-                            customerInfo.address?.city || customerInfo.city,
-                            customerInfo.address?.state || customerInfo.state,
-                            customerInfo.address?.zip || customerInfo.zip,
-                            customerInfo.address?.country || customerInfo.country,
-                          ].filter(Boolean).join(", ") || null}
-                        />
-                      </div>
-                    </>
                   )}
                 </div>
               )}
