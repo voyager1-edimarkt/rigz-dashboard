@@ -5,12 +5,16 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 
 ## Architecture
 - **Frontend**: React + Vite with shadcn/ui components, TanStack Query for data fetching
-- **Backend**: Express.js with SSH tunnel (ssh2) + MySQL (mysql2) connection
-- **Connection**: SSH tunnel to remote server (54.161.236.27) → MySQL on localhost:3306
+- **Backend**: Express.js with storage layer pattern (IStorage interface + MySQLStorage implementation)
+- **Database**: SSH tunnel (ssh2) to remote server (54.161.236.27) → MySQL (mysql2) on localhost:3306
+- **Pattern**: Routes → Storage Interface → MySQL Implementation → SSH Tunnel → Remote DB
 
 ## Key Files
-- `server/mysql.ts` - SSH tunnel + MySQL connection management
-- `server/routes.ts` - API endpoints for databases/tables/columns/data/queries/orders
+- `server/storage.ts` - IStorage interface defining all data access methods
+- `server/mysql-storage.ts` - MySQLStorage class implementing IStorage with all database queries
+- `server/mysql.ts` - SSH tunnel + MySQL connection management (low-level)
+- `server/routes.ts` - Thin API route handlers delegating to storage layer
+- `shared/schema.ts` - TypeScript types, Zod schemas, and data interfaces
 - `client/src/App.tsx` - Main app with sidebar layout
 - `client/src/components/app-sidebar.tsx` - Database/table browser sidebar
 - `client/src/pages/table-view.tsx` - Table structure + data viewer with pagination
@@ -39,7 +43,10 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
-- 2026-02-13: Added Orders page with stat cards, searchable/filterable table, and detail sheet parsing JSON content/poContent/invoiceContent fields
+- 2026-02-13: Refactored backend to use IStorage interface + MySQLStorage pattern (routes no longer contain direct SQL)
+- 2026-02-13: Updated color palette to red/black/white brand theme
+- 2026-02-13: Replaced pie chart with line chart for recent order activity on Dashboard
+- 2026-02-13: Added Orders page with searchable/filterable table, and detail dialog with parsed JSON content
 - 2026-02-13: Added Customers page with stats, search, filters, and detail sheet
 - 2026-02-13: Added Dashboard with interactive US/Canada maps showing customer distribution
 - 2026-02-13: Initial build - SSH tunnel MySQL connection, database browser UI, query runner
