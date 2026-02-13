@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ConnectionBadge } from "@/components/connection-badge";
+
 import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
 import Orders, { OrderDetailPage } from "@/pages/orders";
@@ -35,7 +35,6 @@ function AppContent() {
           <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <ConnectionBadge />
             </div>
           </header>
           <main className="flex-1 min-h-0 overflow-hidden">
