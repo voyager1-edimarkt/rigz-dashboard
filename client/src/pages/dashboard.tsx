@@ -52,14 +52,14 @@ interface OrderStats {
 }
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
-  PO_RECEIVED: "#3b82f6",
-  PO_SENT: "#6366f1",
-  INVOICE_SENT: "#8b5cf6",
-  INVOICE_RECEIPT: "#10b981",
-  INVOICE_RECEIVED: "#14b8a6",
-  FULFILLMENT_READY: "#06b6d4",
-  CANCELLED: "#ef4444",
-  BILL_SENT: "#f59e0b",
+  PO_RECEIVED: "#dc2626",
+  PO_SENT: "#991b1b",
+  INVOICE_SENT: "#7f1d1d",
+  INVOICE_RECEIPT: "#1c1917",
+  INVOICE_RECEIVED: "#44403c",
+  FULFILLMENT_READY: "#b91c1c",
+  CANCELLED: "#78716c",
+  BILL_SENT: "#ef4444",
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -76,23 +76,23 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
 function getColorUS(count: number, max: number): string {
   if (count === 0) return "#f1f5f9";
   const ratio = count / max;
-  if (ratio > 0.5) return "#1e40af";
-  if (ratio > 0.3) return "#2563eb";
-  if (ratio > 0.15) return "#3b82f6";
-  if (ratio > 0.05) return "#60a5fa";
-  if (ratio > 0.02) return "#93c5fd";
-  return "#bfdbfe";
+  if (ratio > 0.5) return "#7f1d1d";
+  if (ratio > 0.3) return "#991b1b";
+  if (ratio > 0.15) return "#b91c1c";
+  if (ratio > 0.05) return "#dc2626";
+  if (ratio > 0.02) return "#f87171";
+  return "#fecaca";
 }
 
 function getColorCA(count: number, max: number): string {
   if (count === 0) return "#f1f5f9";
   const ratio = count / max;
-  if (ratio > 0.5) return "#065f46";
-  if (ratio > 0.3) return "#047857";
-  if (ratio > 0.15) return "#059669";
-  if (ratio > 0.05) return "#34d399";
-  if (ratio > 0.02) return "#6ee7b7";
-  return "#a7f3d0";
+  if (ratio > 0.5) return "#1c1917";
+  if (ratio > 0.3) return "#292524";
+  if (ratio > 0.15) return "#44403c";
+  if (ratio > 0.05) return "#78716c";
+  if (ratio > 0.02) return "#a8a29e";
+  return "#d6d3d1";
 }
 
 function OrderPieTooltip({ active, payload }: any) {
