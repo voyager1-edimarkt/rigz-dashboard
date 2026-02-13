@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ConnectionBadge } from "@/components/connection-badge";
 import Dashboard from "@/pages/dashboard";
 import Customers from "@/pages/customers";
@@ -44,7 +43,6 @@ function AppContent() {
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <ConnectionBadge />
             </div>
-            <ThemeToggle />
           </header>
           <main className="flex-1 min-h-0 overflow-hidden">
             <Switch>
