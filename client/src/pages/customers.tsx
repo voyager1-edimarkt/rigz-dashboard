@@ -30,6 +30,7 @@ import {
 import {
   Users,
   Building2,
+  MapPin,
   RefreshCw,
   Search,
   ChevronLeft,
