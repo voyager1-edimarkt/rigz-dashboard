@@ -9,7 +9,7 @@ import {
   Geographies,
   Geography,
 } from "react-simple-maps";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 const US_TOPO_URL = "/states-10m.json";
 const CA_GEO_URL = "/canada-provinces.json";
@@ -51,27 +51,6 @@ interface OrderStats {
   recentByDay: { day: string; cnt: number }[];
 }
 
-const ORDER_STATUS_COLORS: Record<string, string> = {
-  PO_RECEIVED: "#dc2626",
-  PO_SENT: "#991b1b",
-  INVOICE_SENT: "#7f1d1d",
-  INVOICE_RECEIPT: "#1c1917",
-  INVOICE_RECEIVED: "#44403c",
-  FULFILLMENT_READY: "#b91c1c",
-  CANCELLED: "#78716c",
-  BILL_SENT: "#ef4444",
-};
-
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  PO_RECEIVED: "PO Received",
-  PO_SENT: "PO Sent",
-  INVOICE_SENT: "Invoice Sent",
-  INVOICE_RECEIPT: "Invoice Receipt",
-  INVOICE_RECEIVED: "Invoice Received",
-  FULFILLMENT_READY: "Fulfillment Ready",
-  CANCELLED: "Cancelled",
-  BILL_SENT: "Bill Sent",
-};
 
 function getColorUS(count: number, max: number): string {
   if (count === 0) return "#f1f5f9";
@@ -95,13 +74,12 @@ function getColorCA(count: number, max: number): string {
   return "#d6d3d1";
 }
 
-function OrderPieTooltip({ active, payload }: any) {
+function LineChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.[0]) return null;
-  const d = payload[0].payload;
   return (
     <div className="bg-background border rounded-lg shadow-lg px-3 py-2">
-      <p className="text-sm font-semibold" style={{ color: d.color }}>{d.label}</p>
-      <p className="text-xs text-muted-foreground">{d.cnt.toLocaleString()} orders ({d.pct}%)</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold">{payload[0].value} orders</p>
     </div>
   );
 }
@@ -141,16 +119,14 @@ export default function Dashboard() {
   const usCount = stats?.byCountry.find((c) => c.country === "US")?.cnt ?? 0;
   const caCount = stats?.byCountry.find((c) => c.country === "CA")?.cnt ?? 0;
 
-  const pieData = useMemo(() => {
-    if (!orderStats?.byStatus) return [];
-    const total = orderStats.total || 1;
-    return orderStats.byStatus.map((s) => ({
-      name: s.status,
-      label: ORDER_STATUS_LABELS[s.status] || s.status,
-      cnt: s.cnt,
-      pct: ((s.cnt / total) * 100).toFixed(1),
-      color: ORDER_STATUS_COLORS[s.status] || "#94a3b8",
-    }));
+  const lineData = useMemo(() => {
+    if (!orderStats?.recentByDay) return [];
+    return [...orderStats.recentByDay]
+      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
+      .map((d) => ({
+        date: new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        orders: d.cnt,
+      }));
   }, [orderStats]);
 
   return (
@@ -309,11 +285,11 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card data-testid="card-order-status-chart">
+      <Card data-testid="card-order-activity-chart">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-4 h-4 text-muted-foreground" />
-            <CardTitle className="text-sm">Order Status Distribution</CardTitle>
+            <CardTitle className="text-sm">Recent Order Activity</CardTitle>
           </div>
           <Badge variant="outline" data-testid="badge-total-orders">
             {orderStats?.total.toLocaleString() ?? "..."} total
@@ -322,43 +298,36 @@ export default function Dashboard() {
         <CardContent>
           {orderStatsLoading ? (
             <div className="flex items-center justify-center h-[260px]">
-              <Skeleton className="w-[220px] h-[220px] rounded-full" />
+              <Skeleton className="h-[220px] w-full" />
             </div>
-          ) : pieData.length > 0 ? (
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-[280px] h-[280px] shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={120}
-                      paddingAngle={2}
-                      dataKey="cnt"
-                      strokeWidth={2}
-                      stroke="hsl(var(--background))"
-                    >
-                      {pieData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<OrderPieTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-2">
-                {pieData.map((entry) => (
-                  <div key={entry.name} className="flex items-center gap-2.5 py-1.5" data-testid={`legend-${entry.name}`}>
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{entry.label}</p>
-                      <p className="text-xs text-muted-foreground">{entry.cnt.toLocaleString()} ({entry.pct}%)</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          ) : lineData.length > 0 ? (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={lineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <Tooltip content={<LineChartTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="orders"
+                    stroke="#dc2626"
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: "#dc2626", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                    activeDot={{ r: 6, fill: "#dc2626", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           ) : (
             <div className="flex items-center justify-center h-[260px]">
