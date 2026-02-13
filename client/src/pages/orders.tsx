@@ -917,15 +917,13 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
   );
 }
 
-function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
+function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState("order");
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: ['/api/orders', orderId],
-    enabled: !!orderId && open,
+    enabled: !!orderId,
   });
-
-  if (!orderId) return null;
 
   const content = safeParseJson(order?.content);
   const poContent = safeParseJson(order?.poContent);
@@ -967,65 +965,65 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
   ];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0" data-testid="dialog-order-detail">
-        {isLoading ? (
-          <div className="p-8 space-y-5">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-14 w-14 rounded-xl" />
-              <div className="space-y-2 flex-1">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-8 w-24 rounded-full" />
-              <Skeleton className="h-8 w-20 rounded-full" />
-              <Skeleton className="h-8 w-28 rounded-full" />
-            </div>
-            <div className="space-y-3 pt-2">
-              <Skeleton className="h-14 w-full rounded-lg" />
-              <Skeleton className="h-14 w-full rounded-lg" />
-              <Skeleton className="h-14 w-full rounded-lg" />
+    <div className="flex flex-col h-full border-l border-border bg-background" data-testid="panel-order-detail">
+      {isLoading ? (
+        <div className="p-6 space-y-5">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-14 w-14 rounded-xl" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-32" />
             </div>
           </div>
-        ) : order ? (
-          <>
-            <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent rounded-t-lg">
-              <DialogHeader className="pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20">
-                    <ShoppingCart className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <DialogTitle className="text-xl font-bold" data-testid="text-detail-order-number">
-                      Order #{order.orderNumber}
-                    </DialogTitle>
-                    <DialogDescription className="text-xs font-mono mt-0.5">ID: {order.id}</DialogDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 pt-3 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className={`text-xs font-semibold ${statusCfg?.color}`}
-                    data-testid="badge-detail-status"
-                  >
-                    <StatusIcon className="w-3 h-3 mr-1" />
-                    {statusCfg?.label}
-                  </Badge>
-                  {order.purchaseOrderNumber && (
-                    <Badge variant="outline" className="text-xs" data-testid="badge-detail-po">
-                      <FileText className="w-3 h-3 mr-1" />
-                      PO: {order.purchaseOrderNumber}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs bg-muted/50">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    {order.country}
-                  </Badge>
-                </div>
-              </DialogHeader>
-              <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-24 rounded-full" />
+            <Skeleton className="h-8 w-20 rounded-full" />
+            <Skeleton className="h-8 w-28 rounded-full" />
+          </div>
+          <div className="space-y-3 pt-2">
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </div>
+        </div>
+      ) : order ? (
+        <>
+          <div className="px-5 pt-5 pb-3 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent">
+            <div className="flex items-center gap-3 pb-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
+                <ShoppingCart className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold" data-testid="text-detail-order-number">
+                  Order #{order.orderNumber}
+                </h2>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {order.id}</p>
+              </div>
+              <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-detail">
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 pb-3 flex-wrap">
+              <Badge
+                variant="outline"
+                className={`text-xs font-semibold ${statusCfg?.color}`}
+                data-testid="badge-detail-status"
+              >
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {statusCfg?.label}
+              </Badge>
+              {order.purchaseOrderNumber && (
+                <Badge variant="outline" className="text-xs" data-testid="badge-detail-po">
+                  <FileText className="w-3 h-3 mr-1" />
+                  PO: {order.purchaseOrderNumber}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs bg-muted/50">
+                <MapPin className="w-3 h-3 mr-1" />
+                {order.country}
+              </Badge>
+            </div>
+            <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
             </div>
 
             <div className="p-6 pt-5 flex-1 overflow-y-auto min-h-0">
@@ -1220,8 +1218,7 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
             <p className="text-sm text-muted-foreground">Order not found</p>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
 
@@ -1261,181 +1258,195 @@ export default function Orders() {
   const totalPages = Math.ceil(totalRows / limit);
 
   return (
-    <div className="flex flex-col h-full gap-4 p-4 overflow-auto" data-testid="page-orders">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
-            <ShoppingCart className="w-5 h-5 text-red-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold" data-testid="text-orders-title">Orders</h1>
-            <p className="text-sm text-muted-foreground">Browse and manage all order records</p>
-          </div>
-        </div>
-        <Button size="icon" variant="ghost" onClick={handleRefresh} data-testid="button-refresh-orders">
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-      </div>
-
-      <Card className="flex-1 flex flex-col min-h-0">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-muted-foreground" />
-              <CardTitle className="text-base">All Orders</CardTitle>
-              <Badge variant="secondary" data-testid="badge-order-count">{totalRows.toLocaleString()}</Badge>
+    <div className="flex h-full" data-testid="page-orders">
+      <div className={`flex flex-col gap-4 p-4 overflow-auto transition-all duration-200 ${selectedOrderId ? "flex-1 min-w-0" : "w-full"}`}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
+              <ShoppingCart className="w-5 h-5 text-red-600" />
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  data-testid="button-prev-page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-xs text-muted-foreground px-2">
-                  {page + 1} / {totalPages}
-                </span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                  data-testid="button-next-page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+            <div>
+              <h1 className="text-xl font-semibold" data-testid="text-orders-title">Orders</h1>
+              <p className="text-sm text-muted-foreground">Browse and manage all order records</p>
+            </div>
+          </div>
+          <Button size="icon" variant="ghost" onClick={handleRefresh} data-testid="button-refresh-orders">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <Card className="flex-1 flex flex-col min-h-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base">All Orders</CardTitle>
+                <Badge variant="secondary" data-testid="badge-order-count">{totalRows.toLocaleString()}</Badge>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    data-testid="button-prev-page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground px-2">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage((p) => p + 1)}
+                    data-testid="button-next-page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 pt-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by order number or CRM ID..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="pl-8"
+                  data-testid="input-search-orders"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === "all" ? "" : v); setPage(0); }}>
+                <SelectTrigger className="w-[160px]" data-testid="select-order-status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="PO_RECEIVED">PO Received</SelectItem>
+                  <SelectItem value="PO_SENT">PO Sent</SelectItem>
+                  <SelectItem value="INVOICE_SENT">Invoice Sent</SelectItem>
+                  <SelectItem value="INVOICE_RECEIPT">Invoice Receipt</SelectItem>
+                  <SelectItem value="FULFILLMENT_READY">Fulfillment Ready</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={handleSearch} data-testid="button-search-orders">
+                <Search className="w-3.5 h-3.5 mr-1.5" />
+                Search
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 p-0 min-h-0 overflow-auto">
+            {ordersLoading ? (
+              <div className="p-4 space-y-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="w-9 h-9 rounded-md" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : orders && orders.rows.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[140px]">Order #</TableHead>
+                    <TableHead className="min-w-[100px]">CRM ID</TableHead>
+                    {!selectedOrderId && <TableHead className="min-w-[80px]">Vendor</TableHead>}
+                    <TableHead className="min-w-[120px]">Status</TableHead>
+                    {!selectedOrderId && <TableHead className="min-w-[100px]">PO #</TableHead>}
+                    {!selectedOrderId && <TableHead className="min-w-[110px]">Order Date</TableHead>}
+                    {!selectedOrderId && <TableHead className="min-w-[110px]">Created</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.rows.map((row) => {
+                    const cfg = getStatusConfig(row.status);
+                    const RowStatusIcon = cfg.icon;
+                    const isSelected = row.id === selectedOrderId;
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className={`cursor-pointer ${isSelected ? "bg-red-500/5" : ""}`}
+                        onClick={() => setSelectedOrderId(row.id)}
+                        data-testid={`row-order-${row.id}`}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
+                              <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
+                            </div>
+                            <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
+                              {row.orderNumber}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm font-mono text-muted-foreground">{row.crmId}</span>
+                        </TableCell>
+                        {!selectedOrderId && (
+                          <TableCell>
+                            <span className="text-sm">{row.vendor}</span>
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${cfg.color}`}
+                            data-testid={`badge-status-${row.id}`}
+                          >
+                            <RowStatusIcon className="w-3 h-3 mr-1" />
+                            {cfg.label}
+                          </Badge>
+                        </TableCell>
+                        {!selectedOrderId && (
+                          <TableCell>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {row.purchaseOrderNumber || "-"}
+                            </span>
+                          </TableCell>
+                        )}
+                        {!selectedOrderId && (
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">{formatDate(row.orderDate)}</span>
+                          </TableCell>
+                        )}
+                        {!selectedOrderId && (
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-40 gap-2">
+                <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">No orders found</p>
               </div>
             )}
-          </div>
-          <div className="flex items-center gap-2 pt-2 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search by order number or CRM ID..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="pl-8"
-                data-testid="input-search-orders"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === "all" ? "" : v); setPage(0); }}>
-              <SelectTrigger className="w-[160px]" data-testid="select-order-status">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="PO_RECEIVED">PO Received</SelectItem>
-                <SelectItem value="PO_SENT">PO Sent</SelectItem>
-                <SelectItem value="INVOICE_SENT">Invoice Sent</SelectItem>
-                <SelectItem value="INVOICE_RECEIPT">Invoice Receipt</SelectItem>
-                <SelectItem value="FULFILLMENT_READY">Fulfillment Ready</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch} data-testid="button-search-orders">
-              <Search className="w-3.5 h-3.5 mr-1.5" />
-              Search
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 p-0 min-h-0 overflow-auto">
-          {ordersLoading ? (
-            <div className="p-4 space-y-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="w-9 h-9 rounded-md" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : orders && orders.rows.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[140px]">Order #</TableHead>
-                  <TableHead className="min-w-[100px]">CRM ID</TableHead>
-                  <TableHead className="min-w-[80px]">Vendor</TableHead>
-                  <TableHead className="min-w-[120px]">Status</TableHead>
-                  <TableHead className="min-w-[100px]">PO #</TableHead>
-                  <TableHead className="min-w-[110px]">Order Date</TableHead>
-                  <TableHead className="min-w-[110px]">Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.rows.map((row) => {
-                  const cfg = getStatusConfig(row.status);
-                  const RowStatusIcon = cfg.icon;
-                  return (
-                    <TableRow
-                      key={row.id}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedOrderId(row.id)}
-                      data-testid={`row-order-${row.id}`}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
-                            <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
-                          </div>
-                          <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
-                            {row.orderNumber}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm font-mono text-muted-foreground">{row.crmId}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{row.vendor}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${cfg.color}`}
-                          data-testid={`badge-status-${row.id}`}
-                        >
-                          <RowStatusIcon className="w-3 h-3 mr-1" />
-                          {cfg.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {row.purchaseOrderNumber || "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground">{formatDate(row.orderDate)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-40 gap-2">
-              <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">No orders found</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
-      <OrderDetailSheet
-        orderId={selectedOrderId}
-        open={selectedOrderId !== null}
-        onClose={() => setSelectedOrderId(null)}
-      />
+      {selectedOrderId && (
+        <div className="w-[480px] shrink-0 h-full overflow-hidden">
+          <OrderDetailPanel
+            orderId={selectedOrderId}
+            onClose={() => setSelectedOrderId(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
