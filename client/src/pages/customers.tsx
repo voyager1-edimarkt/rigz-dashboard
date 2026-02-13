@@ -31,6 +31,7 @@ import {
   Users,
   Building2,
   MapPin,
+  Globe,
   RefreshCw,
   Search,
   ChevronLeft,
