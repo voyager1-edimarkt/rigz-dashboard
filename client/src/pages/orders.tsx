@@ -1057,39 +1057,36 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
           <div className="px-6 pt-4">
               {activeTab === "order" && (
                 <div className="space-y-6" data-testid="tab-content-order">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
-                    <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
-                    <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
-                    <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <InfoCard icon={FileText} label="PO Number" value={content?.poNumber || order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
+                      {content?.date && <InfoCard icon={Calendar} label="Date" value={formatDate(content.date)} accent="bg-red-500/10" />}
+                      {content?.status && <InfoCard icon={Zap} label="PO Status" value={content.status} accent="bg-amber-500/10" />}
+                      {content?.poType && <InfoCard icon={ClipboardList} label="PO Type" value={content.poType} accent="bg-amber-500/10" />}
+                      <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
+                      <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
+                      <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
+                      {content?.brand && <InfoCard icon={Tag} label="Brand" value={content.brand} accent="bg-amber-500/10" />}
+                      {content?.terms && <InfoCard icon={FileText} label="Terms" value={content.terms} accent="bg-amber-500/10" />}
+                      {content?.plannedDeliveryDate && <InfoCard icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} accent="bg-red-500/10" />}
+                      {content?.shipNotBefore && <InfoCard icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} accent="bg-cyan-500/10" />}
+                      {content?.shipNotAfter && <InfoCard icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} accent="bg-cyan-500/10" />}
+                      {content?.shipmentDate && <InfoCard icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} accent="bg-cyan-500/10" />}
+                      {content?.shipAccountNumber && <InfoCard icon={Hash} label="Ship Account #" value={content.shipAccountNumber} accent="bg-cyan-500/10" />}
+                      {content?.vendorNumber && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorNumber} accent="bg-violet-500/10" />}
+                      {content?.paymentMode && <InfoCard icon={CreditCard} label="Payment Mode" value={content.paymentMode} accent="bg-emerald-500/10" />}
+                      {content?.allowanceOrCharge && <InfoCard icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} accent="bg-emerald-500/10" />}
+                      {content?.grossAmount && <InfoCard icon={DollarSign} label="Gross Amount" value={content.grossAmount} accent="bg-emerald-500/10" />}
+                      {content?.totalItems && <InfoCard icon={Layers} label="Total Items" value={content.totalItems} accent="bg-indigo-500/10" />}
+                      {content?.totalAmount && <InfoCard icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} accent="bg-emerald-500/10" />}
+                      {content?.priceIdentifier?.name && <InfoCard icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} accent="bg-amber-500/10" />}
+                      {content?.packingSlipUrl && <InfoCard icon={FileText} label="Packing Slip" value={content.packingSlipUrl} accent="bg-slate-500/10" />}
+                    </div>
                   </div>
 
                   {content && (
                     <>
-                      <div>
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {content.poNumber && <InfoCard icon={FileText} label="PO Number" value={content.poNumber} accent="bg-red-500/10" />}
-                          {content.date && <InfoCard icon={Calendar} label="Date" value={formatDate(content.date)} accent="bg-red-500/10" />}
-                          {content.plannedDeliveryDate && <InfoCard icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} accent="bg-red-500/10" />}
-                          {content.status && <InfoCard icon={Zap} label="PO Status" value={content.status} accent="bg-amber-500/10" />}
-                          {content.poType && <InfoCard icon={ClipboardList} label="PO Type" value={content.poType} accent="bg-amber-500/10" />}
-                          {content.brand && <InfoCard icon={Tag} label="Brand" value={content.brand} accent="bg-amber-500/10" />}
-                          {content.terms && <InfoCard icon={FileText} label="Terms" value={content.terms} accent="bg-amber-500/10" />}
-                          {content.shipNotBefore && <InfoCard icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} accent="bg-cyan-500/10" />}
-                          {content.shipNotAfter && <InfoCard icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} accent="bg-cyan-500/10" />}
-                          {content.shipmentDate && <InfoCard icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} accent="bg-cyan-500/10" />}
-                          {content.shipAccountNumber && <InfoCard icon={Hash} label="Ship Account #" value={content.shipAccountNumber} accent="bg-cyan-500/10" />}
-                          {content.vendorNumber && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorNumber} accent="bg-violet-500/10" />}
-                          {content.paymentMode && <InfoCard icon={CreditCard} label="Payment Mode" value={content.paymentMode} accent="bg-emerald-500/10" />}
-                          {content.allowanceOrCharge && <InfoCard icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} accent="bg-emerald-500/10" />}
-                          {content.grossAmount && <InfoCard icon={DollarSign} label="Gross Amount" value={content.grossAmount} accent="bg-emerald-500/10" />}
-                          {content.totalItems && <InfoCard icon={Layers} label="Total Items" value={content.totalItems} accent="bg-indigo-500/10" />}
-                          {content.totalAmount && <InfoCard icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} accent="bg-emerald-500/10" />}
-                          {content.priceIdentifier?.name && <InfoCard icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} accent="bg-amber-500/10" />}
-                          {content.packingSlipUrl && <InfoCard icon={FileText} label="Packing Slip" value={content.packingSlipUrl} accent="bg-slate-500/10" />}
-                        </div>
-                      </div>
 
                       {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
                         <div>
