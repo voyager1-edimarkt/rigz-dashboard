@@ -68,17 +68,7 @@ export function AppSidebar({
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary">
-            <Database className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">MySQL Explorer</span>
-            <span className="text-xs text-muted-foreground">Database Manager</span>
-          </div>
-        </div>
-      </SidebarHeader>
+      <SidebarHeader className="p-2" />
 
       <SidebarContent>
         <SidebarGroup>
