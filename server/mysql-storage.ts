@@ -634,7 +634,8 @@ export class MySQLStorage implements IStorage {
            qty DECIMAL(12,2) PATH '$.acceptedQuantity',
            price DECIMAL(12,2) PATH '$.price'
          )) jt
-         WHERE jt.qty > 0 AND jt.sku IS NOT NULL`
+         WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+           AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'`
       ) as any[],
       queryNoDb(
         `SELECT jt.sku, SUM(jt.qty) as totalQty, SUM(jt.qty * jt.price) as totalRevenue,
@@ -657,6 +658,7 @@ export class MySQLStorage implements IStorage {
            qty DECIMAL(12,2) PATH '$.acceptedQuantity'
          )) jt
          WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+           AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
          GROUP BY DATE(o.orderDate) ORDER BY day DESC LIMIT 30`
       ) as any[],
       queryNoDb(
@@ -668,6 +670,7 @@ export class MySQLStorage implements IStorage {
            price DECIMAL(12,2) PATH '$.price'
          )) jt
          WHERE jt.qty > 0 AND jt.sku IS NOT NULL AND o.vendor IS NOT NULL
+           AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
          GROUP BY o.vendor ORDER BY revenue DESC LIMIT 10`
       ) as any[],
     ]);
