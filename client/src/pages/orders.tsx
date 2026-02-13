@@ -158,10 +158,13 @@ function safeParseJson(str: string | null | undefined): any {
   }
 }
 
-function DetailRow({ label, value, testId }: { label: string; value: string | null | undefined; testId?: string }) {
+function DetailRow({ icon: Icon, label, value, testId }: { icon?: any; label: string; value: string | null | undefined; testId?: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <p className="text-sm text-muted-foreground shrink-0">{label}</p>
+      <div className="flex items-center gap-2 shrink-0">
+        {Icon && <Icon className="w-3.5 h-3.5 text-muted-foreground/70" />}
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
       <p className="text-sm font-medium text-right break-words min-w-0" data-testid={testId}>{value || "-"}</p>
     </div>
   );
@@ -1070,32 +1073,32 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="rounded-md border bg-card p-5 space-y-4">
-                        <DetailRow label="PO Number" value={content?.poNumber || order.orderNumber} testId="text-detail-order-num" />
-                        <DetailRow label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
-                        <DetailRow label="Vendor" value={order.vendor} testId="text-detail-vendor" />
-                        <DetailRow label="Country" value={order.country} testId="text-detail-country" />
-                        {content?.status && <DetailRow label="PO Status" value={content.status} />}
-                        {content?.poType && <DetailRow label="PO Type" value={content.poType} />}
-                        {content?.brand && <DetailRow label="Brand" value={content.brand} />}
-                        {content?.terms && <DetailRow label="Terms" value={content.terms} />}
-                        {content?.vendorNumber && <DetailRow label="Vendor Number" value={content.vendorNumber} />}
-                        {content?.paymentMode && <DetailRow label="Payment Mode" value={content.paymentMode} />}
-                        {content?.priceIdentifier?.name && <DetailRow label="Price Identifier" value={content.priceIdentifier.name} />}
+                        <DetailRow icon={FileText} label="PO Number" value={content?.poNumber || order.orderNumber} testId="text-detail-order-num" />
+                        <DetailRow icon={Hash} label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
+                        <DetailRow icon={Package} label="Vendor" value={order.vendor} testId="text-detail-vendor" />
+                        <DetailRow icon={Globe} label="Country" value={order.country} testId="text-detail-country" />
+                        {content?.status && <DetailRow icon={Zap} label="PO Status" value={content.status} />}
+                        {content?.poType && <DetailRow icon={ClipboardList} label="PO Type" value={content.poType} />}
+                        {content?.brand && <DetailRow icon={Tag} label="Brand" value={content.brand} />}
+                        {content?.terms && <DetailRow icon={FileText} label="Terms" value={content.terms} />}
+                        {content?.vendorNumber && <DetailRow icon={Hash} label="Vendor Number" value={content.vendorNumber} />}
+                        {content?.paymentMode && <DetailRow icon={CreditCard} label="Payment Mode" value={content.paymentMode} />}
+                        {content?.priceIdentifier?.name && <DetailRow icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} />}
                       </div>
                       <div className="rounded-md border bg-card p-5 space-y-4">
-                        {content?.date && <DetailRow label="Order Date" value={formatDate(content.date)} />}
-                        <DetailRow label="Created" value={formatDate(order.createdAt)} />
-                        <DetailRow label="Updated" value={formatDate(order.updatedAt)} />
-                        {content?.plannedDeliveryDate && <DetailRow label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} />}
-                        {content?.shipNotBefore && <DetailRow label="Ship Not Before" value={formatDate(content.shipNotBefore)} />}
-                        {content?.shipNotAfter && <DetailRow label="Ship Not After" value={formatDate(content.shipNotAfter)} />}
-                        {content?.shipmentDate && <DetailRow label="Shipment Date" value={formatDate(content.shipmentDate)} />}
-                        {content?.shipAccountNumber && <DetailRow label="Ship Account #" value={content.shipAccountNumber} />}
-                        {content?.totalItems && <DetailRow label="Total Items" value={content.totalItems} />}
-                        {content?.totalAmount && <DetailRow label="Total Amount" value={formatCurrency(content.totalAmount)} />}
-                        {content?.grossAmount && <DetailRow label="Gross Amount" value={content.grossAmount} />}
-                        {content?.allowanceOrCharge && <DetailRow label="Allowance/Charge" value={content.allowanceOrCharge} />}
-                        {content?.packingSlipUrl && <DetailRow label="Packing Slip URL" value={content.packingSlipUrl} />}
+                        {content?.date && <DetailRow icon={Calendar} label="Order Date" value={formatDate(content.date)} />}
+                        <DetailRow icon={Calendar} label="Created" value={formatDate(order.createdAt)} />
+                        <DetailRow icon={Calendar} label="Updated" value={formatDate(order.updatedAt)} />
+                        {content?.plannedDeliveryDate && <DetailRow icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} />}
+                        {content?.shipNotBefore && <DetailRow icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} />}
+                        {content?.shipNotAfter && <DetailRow icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} />}
+                        {content?.shipmentDate && <DetailRow icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} />}
+                        {content?.shipAccountNumber && <DetailRow icon={Hash} label="Ship Account #" value={content.shipAccountNumber} />}
+                        {content?.totalItems && <DetailRow icon={Layers} label="Total Items" value={content.totalItems} />}
+                        {content?.totalAmount && <DetailRow icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} />}
+                        {content?.grossAmount && <DetailRow icon={DollarSign} label="Gross Amount" value={content.grossAmount} />}
+                        {content?.allowanceOrCharge && <DetailRow icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} />}
+                        {content?.packingSlipUrl && <DetailRow icon={FileText} label="Packing Slip URL" value={content.packingSlipUrl} />}
                       </div>
                     </div>
                   </div>
@@ -1118,48 +1121,48 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                           {content.customer && (
                             <div className="rounded-md border bg-card p-5 space-y-4">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
-                              {content.customer.name && <DetailRow label="Name" value={content.customer.name} />}
-                              {content.customer.id && <DetailRow label="ID" value={content.customer.id} />}
-                              {content.customer.email && <DetailRow label="Email" value={content.customer.email} />}
-                              <DetailRow label="Address" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || "-"} />
+                              {content.customer.name && <DetailRow icon={User} label="Name" value={content.customer.name} />}
+                              {content.customer.id && <DetailRow icon={Hash} label="ID" value={content.customer.id} />}
+                              {content.customer.email && <DetailRow icon={Mail} label="Email" value={content.customer.email} />}
+                              <DetailRow icon={MapPin} label="Address" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || "-"} />
                             </div>
                           )}
 
                           {content.shipTo && (content.shipTo.name || content.shipTo.street) && (
                             <div className="rounded-md border bg-card p-5 space-y-4">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship To</p>
-                              {content.shipTo.name && <DetailRow label="Name" value={content.shipTo.name} />}
-                              {content.shipTo.locationCode && <DetailRow label="Location Code" value={content.shipTo.locationCode} />}
-                              {content.shipTo.email && <DetailRow label="Email" value={content.shipTo.email} />}
-                              <DetailRow label="Address" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || "-"} />
+                              {content.shipTo.name && <DetailRow icon={User} label="Name" value={content.shipTo.name} />}
+                              {content.shipTo.locationCode && <DetailRow icon={Hash} label="Location Code" value={content.shipTo.locationCode} />}
+                              {content.shipTo.email && <DetailRow icon={Mail} label="Email" value={content.shipTo.email} />}
+                              <DetailRow icon={MapPin} label="Address" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || "-"} />
                             </div>
                           )}
 
                           {content.billTo && (content.billTo.name || content.billTo.street?.trim()) && (
                             <div className="rounded-md border bg-card p-5 space-y-4">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bill To</p>
-                              {content.billTo.name && <DetailRow label="Name" value={content.billTo.name} />}
-                              {content.billTo.email && <DetailRow label="Email" value={content.billTo.email} />}
-                              <DetailRow label="Address" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || "-"} />
+                              {content.billTo.name && <DetailRow icon={User} label="Name" value={content.billTo.name} />}
+                              {content.billTo.email && <DetailRow icon={Mail} label="Email" value={content.billTo.email} />}
+                              <DetailRow icon={MapPin} label="Address" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || "-"} />
                             </div>
                           )}
 
                           {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
                             <div className="rounded-md border bg-card p-5 space-y-4">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</p>
-                              {content.supplier.name && <DetailRow label="Name" value={content.supplier.name} />}
-                              {content.supplier.warehouseZip && <DetailRow label="Warehouse Zip" value={content.supplier.warehouseZip} />}
-                              {content.supplier.phone && <DetailRow label="Phone" value={content.supplier.phone} />}
-                              {content.supplier.email && <DetailRow label="Email" value={content.supplier.email} />}
-                              {content.supplier.fax && <DetailRow label="Fax" value={content.supplier.fax} />}
+                              {content.supplier.name && <DetailRow icon={Building2} label="Name" value={content.supplier.name} />}
+                              {content.supplier.warehouseZip && <DetailRow icon={MapPin} label="Warehouse Zip" value={content.supplier.warehouseZip} />}
+                              {content.supplier.phone && <DetailRow icon={Phone} label="Phone" value={content.supplier.phone} />}
+                              {content.supplier.email && <DetailRow icon={Mail} label="Email" value={content.supplier.email} />}
+                              {content.supplier.fax && <DetailRow icon={Phone} label="Fax" value={content.supplier.fax} />}
                             </div>
                           )}
 
                           {content.vendorInfo && (content.vendorInfo.name || content.vendorInfo.number) && (
                             <div className="rounded-md border bg-card p-5 space-y-4">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vendor Info</p>
-                              {content.vendorInfo.name && <DetailRow label="Name" value={content.vendorInfo.name} />}
-                              {content.vendorInfo.number && <DetailRow label="Number" value={content.vendorInfo.number} />}
+                              {content.vendorInfo.name && <DetailRow icon={Store} label="Name" value={content.vendorInfo.name} />}
+                              {content.vendorInfo.number && <DetailRow icon={Hash} label="Number" value={content.vendorInfo.number} />}
                             </div>
                           )}
                         </div>
