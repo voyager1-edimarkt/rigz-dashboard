@@ -68,6 +68,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { useLocation } from "wouter";
+import { ArrowLeft } from "lucide-react";
 
 interface OrderRow {
   id: number;
@@ -917,8 +919,9 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
   );
 }
 
-function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+export function OrderDetailPage({ orderId }: { orderId: number }) {
   const [activeTab, setActiveTab] = useState("order");
+  const [, navigate] = useLocation();
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: ['/api/orders', orderId],
@@ -965,9 +968,15 @@ function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () =
   ];
 
   return (
-    <div className="flex flex-col h-full border-l border-border bg-background" data-testid="panel-order-detail">
+    <div className="flex flex-col h-full overflow-auto" data-testid="page-order-detail">
+      <div className="p-4 pb-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/orders")} data-testid="button-back-orders">
+          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+          Back to Orders
+        </Button>
+      </div>
       {isLoading ? (
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 max-w-3xl mx-auto w-full">
           <div className="flex items-center gap-4">
             <Skeleton className="h-14 w-14 rounded-xl" />
             <div className="space-y-2 flex-1">
@@ -987,23 +996,20 @@ function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () =
           </div>
         </div>
       ) : order ? (
-        <>
-          <div className="px-5 pt-5 pb-3 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent">
-            <div className="flex items-center gap-3 pb-3">
-              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
-                <ShoppingCart className="w-5 h-5 text-white" />
+        <div className="max-w-3xl mx-auto w-full px-6 pb-6">
+          <div className="pb-4 border-b mb-5 bg-gradient-to-b from-red-500/5 to-transparent rounded-lg px-5 pt-5">
+            <div className="flex items-center gap-4 pb-3">
+              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
+                <ShoppingCart className="w-6 h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-bold" data-testid="text-detail-order-number">
+                <h1 className="text-xl font-bold" data-testid="text-detail-order-number">
                   Order #{order.orderNumber}
-                </h2>
+                </h1>
                 <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {order.id}</p>
               </div>
-              <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-detail">
-                <XCircle className="w-4 h-4" />
-              </Button>
             </div>
-            <div className="flex items-center gap-2 pb-3 flex-wrap">
+            <div className="flex items-center gap-2 pb-4 flex-wrap">
               <Badge
                 variant="outline"
                 className={`text-xs font-semibold ${statusCfg?.color}`}
@@ -1024,9 +1030,9 @@ function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () =
               </Badge>
             </div>
             <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
-            </div>
+          </div>
 
-            <div className="p-6 pt-5 flex-1 overflow-y-auto min-h-0">
+          <div className="py-2">
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 gap-3">
@@ -1210,14 +1216,14 @@ function OrderDetailPanel({ orderId, onClose }: { orderId: number; onClose: () =
                   <OrderHistoryTimeline orderId={orderId} />
                 </div>
               )}
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <ShoppingCart className="w-8 h-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">Order not found</p>
           </div>
-        )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-40 gap-2">
+          <ShoppingCart className="w-8 h-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Order not found</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1227,7 +1233,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [, navigate] = useLocation();
   const limit = 25;
 
   const queryParams = new URLSearchParams();
@@ -1258,8 +1264,7 @@ export default function Orders() {
   const totalPages = Math.ceil(totalRows / limit);
 
   return (
-    <div className="flex h-full" data-testid="page-orders">
-      <div className={`flex flex-col gap-4 p-4 overflow-auto transition-all duration-200 ${selectedOrderId ? "flex-1 min-w-0" : "w-full"}`}>
+    <div className="flex flex-col h-full gap-4 p-4 overflow-auto" data-testid="page-orders">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-md bg-red-500/15">
@@ -1360,23 +1365,22 @@ export default function Orders() {
                   <TableRow>
                     <TableHead className="min-w-[140px]">Order #</TableHead>
                     <TableHead className="min-w-[100px]">CRM ID</TableHead>
-                    {!selectedOrderId && <TableHead className="min-w-[80px]">Vendor</TableHead>}
+                    <TableHead className="min-w-[80px]">Vendor</TableHead>
                     <TableHead className="min-w-[120px]">Status</TableHead>
-                    {!selectedOrderId && <TableHead className="min-w-[100px]">PO #</TableHead>}
-                    {!selectedOrderId && <TableHead className="min-w-[110px]">Order Date</TableHead>}
-                    {!selectedOrderId && <TableHead className="min-w-[110px]">Created</TableHead>}
+                    <TableHead className="min-w-[100px]">PO #</TableHead>
+                    <TableHead className="min-w-[110px]">Order Date</TableHead>
+                    <TableHead className="min-w-[110px]">Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orders.rows.map((row) => {
                     const cfg = getStatusConfig(row.status);
                     const RowStatusIcon = cfg.icon;
-                    const isSelected = row.id === selectedOrderId;
                     return (
                       <TableRow
                         key={row.id}
-                        className={`cursor-pointer ${isSelected ? "bg-red-500/5" : ""}`}
-                        onClick={() => setSelectedOrderId(row.id)}
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/orders/${row.id}`)}
                         data-testid={`row-order-${row.id}`}
                       >
                         <TableCell>
@@ -1392,11 +1396,9 @@ export default function Orders() {
                         <TableCell>
                           <span className="text-sm font-mono text-muted-foreground">{row.crmId}</span>
                         </TableCell>
-                        {!selectedOrderId && (
-                          <TableCell>
-                            <span className="text-sm">{row.vendor}</span>
-                          </TableCell>
-                        )}
+                        <TableCell>
+                          <span className="text-sm">{row.vendor}</span>
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -1407,23 +1409,17 @@ export default function Orders() {
                             {cfg.label}
                           </Badge>
                         </TableCell>
-                        {!selectedOrderId && (
-                          <TableCell>
-                            <span className="text-xs font-mono text-muted-foreground">
-                              {row.purchaseOrderNumber || "-"}
-                            </span>
-                          </TableCell>
-                        )}
-                        {!selectedOrderId && (
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground">{formatDate(row.orderDate)}</span>
-                          </TableCell>
-                        )}
-                        {!selectedOrderId && (
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
-                          </TableCell>
-                        )}
+                        <TableCell>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {row.purchaseOrderNumber || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">{formatDate(row.orderDate)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -1437,16 +1433,6 @@ export default function Orders() {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {selectedOrderId && (
-        <div className="w-[480px] shrink-0 h-full overflow-hidden">
-          <OrderDetailPanel
-            orderId={selectedOrderId}
-            onClose={() => setSelectedOrderId(null)}
-          />
-        </div>
-      )}
     </div>
   );
 }
