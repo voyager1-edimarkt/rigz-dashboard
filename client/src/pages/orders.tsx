@@ -81,7 +81,6 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import truckIcon from "@assets/image_1770956177786.png";
 import { ArrowLeft } from "lucide-react";
 
 interface OrderRow {
@@ -1089,7 +1088,9 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
               <Button variant="ghost" size="icon" onClick={() => navigate("/orders")} data-testid="button-back-orders">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <img src={truckIcon} alt="" className="w-10 h-10 shrink-0" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 shrink-0">
+                <ShoppingCart className="w-4.5 h-4.5 text-white" />
+              </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg font-semibold" data-testid="text-detail-order-number">
                   Order #{order.orderNumber}
@@ -1871,7 +1872,9 @@ export default function Orders() {
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <img src={truckIcon} alt="" className="w-7 h-7 shrink-0" />
+                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
+                              <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
+                            </div>
                             <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
                               {row.orderNumber}
                             </span>
