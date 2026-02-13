@@ -47,32 +47,12 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={location === "/odoo/customers" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/customers")}
-                  data-testid="button-odoo-customers"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Customers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/odoo/sale-orders" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/sale-orders")}
-                  data-testid="button-odoo-sale-orders"
+                  className={location === "/sales-flow" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/sales-flow")}
+                  data-testid="button-sales-flow"
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  <span>Sale Orders</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/odoo/invoices" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/invoices")}
-                  data-testid="button-odoo-invoices"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Invoices</span>
+                  <span>Sales Flow</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
