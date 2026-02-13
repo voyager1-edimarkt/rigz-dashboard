@@ -405,6 +405,38 @@ export interface SalesInsights {
   topVendorsByRevenue: { vendor: string; revenue: number; units: number }[];
 }
 
+export interface InventoryRow {
+  sku: string;
+  warehouse: string;
+  available: number;
+  createdAt: string;
+  updatedAt: string;
+  productName: string | null;
+  vendor: string | null;
+  basePrice: number | null;
+}
+
+export interface InventoryListResult {
+  rows: InventoryRow[];
+  total: number;
+}
+
+export interface InventoryStats {
+  totalSkus: number;
+  totalUnits: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  byWarehouse: { warehouse: string; skus: number; units: number }[];
+}
+
+export interface InventoryFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+  warehouse?: string;
+  stockLevel?: string;
+}
+
 export type ConnectionStatus = z.infer<typeof connectionStatusSchema>;
 export type DatabaseInfo = z.infer<typeof databaseInfoSchema>;
 export type TableInfo = z.infer<typeof tableInfoSchema>;
