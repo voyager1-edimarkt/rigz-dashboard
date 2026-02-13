@@ -26,6 +26,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `client/src/pages/suppliers.tsx` - Suppliers management with stats cards, search, table, detail sheet
 - `client/src/pages/vendors.tsx` - Vendors management with stats, search, status/state filters, table, detail sheet with address/contact sections
 - `client/src/pages/warehouses.tsx` - Warehouses management with card-based grid layout, detail sheet
+- `client/src/pages/errors.tsx` - Errors management with stats cards, search, type/channel filters, table, detail sheet with copyable JSON/EDI content
 - `client/src/pages/dashboard.tsx` - Dashboard with US/Canada maps showing customer distribution
 - `client/src/components/connection-badge.tsx` - Connection status indicator
 - `shared/schema.ts` - TypeScript types and Zod schemas
@@ -44,6 +45,9 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/orders/:id/history` - Order history from order_data table (status changes, inbound/outbound content)
 - `GET /api/products?limit=&offset=&search=&status=&vendor=&location=&active=` - Paginated product list
 - `GET /api/products/stats` - Product statistics (total, active, synced, deleted, avg price, by vendor, by location)
+- `GET /api/errors?limit=&offset=&search=&type=&channelName=` - Paginated error list
+- `GET /api/errors/stats` - Error statistics (total, by type, by channel, by vendor)
+- `GET /api/errors/:id` - Error detail by internal ID
 - `GET /api/suppliers?limit=&offset=&search=` - Paginated supplier list
 - `GET /api/suppliers/stats` - Supplier statistics
 - `GET /api/suppliers/:name` - Supplier detail by name
@@ -62,6 +66,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Errors page with stats cards (total, by type EDI/JSON/XML), search, type/channel filters, table with guide/destination/vendor columns, detail sheet with copyable message/response/detail content
 - 2026-02-13: Added Suppliers page with stats cards, searchable table, detail sheet with carrier/address validation settings
 - 2026-02-13: Added Vendors page with stats cards, search, status/state filters, table with contact info, detail sheet with company/address/contact sections
 - 2026-02-13: Added Warehouses page with card-based grid layout (3 warehouses), detail sheet

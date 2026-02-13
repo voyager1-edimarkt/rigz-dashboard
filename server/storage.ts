@@ -29,6 +29,10 @@ import type {
   VendorFilters,
   WarehouseRow,
   WarehouseListResult,
+  ErrorRow,
+  ErrorListResult,
+  ErrorStats,
+  ErrorFilters,
   TableDataResult,
 } from "@shared/schema";
 
@@ -57,5 +61,8 @@ export interface IStorage {
   getVendorStats(): Promise<VendorStats>;
   getVendorByName(name: string): Promise<VendorRow | null>;
   getWarehouses(): Promise<WarehouseListResult>;
+  getErrors(filters: ErrorFilters): Promise<ErrorListResult>;
+  getErrorStats(): Promise<ErrorStats>;
+  getErrorById(id: number): Promise<ErrorRow | null>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

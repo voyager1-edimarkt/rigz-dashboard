@@ -334,6 +334,45 @@ export interface TableDataResult {
   executionTime: number;
 }
 
+export interface ErrorRow {
+  _id: number;
+  id: string;
+  message: string | null;
+  messageId: string | null;
+  channelId: string;
+  channelName: string | null;
+  destination: string | null;
+  destinationId: string;
+  guide: string | null;
+  statusMessage: string | null;
+  response: string | null;
+  detail: string | null;
+  vendor: string | null;
+  date: string;
+  type: string | null;
+}
+
+export interface ErrorListResult {
+  rows: ErrorRow[];
+  total: number;
+}
+
+export interface ErrorStats {
+  total: number;
+  byType: { type: string; cnt: number }[];
+  byChannel: { channelName: string; cnt: number }[];
+  byVendor: { vendor: string; cnt: number }[];
+  recentByDay: { day: string; cnt: number }[];
+}
+
+export interface ErrorFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+  type?: string;
+  channelName?: string;
+}
+
 export type ConnectionStatus = z.infer<typeof connectionStatusSchema>;
 export type DatabaseInfo = z.infer<typeof databaseInfoSchema>;
 export type TableInfo = z.infer<typeof tableInfoSchema>;

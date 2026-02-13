@@ -29,6 +29,10 @@ import type {
   VendorFilters,
   WarehouseRow,
   WarehouseListResult,
+  ErrorRow,
+  ErrorListResult,
+  ErrorStats,
+  ErrorFilters,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -481,6 +485,64 @@ export class MySQLStorage implements IStorage {
       `SELECT * FROM runtime.warehouses ORDER BY name ASC`
     );
     return { rows: rows as any[], total: (rows as any[]).length };
+  }
+
+  async getErrors(filters: ErrorFilters): Promise<ErrorListResult> {
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (filters.search) {
+      where += " AND (id LIKE ? OR guide LIKE ? OR statusMessage LIKE ? OR channelName LIKE ? OR destination LIKE ?)";
+      const s = `%${filters.search}%`;
+      params.push(s, s, s, s, s);
+    }
+    if (filters.type) {
+      where += " AND type = ?";
+      params.push(filters.type);
+    }
+    if (filters.channelName) {
+      where += " AND channelName = ?";
+      params.push(filters.channelName);
+    }
+
+    const countResult = await queryNoDb(
+      `SELECT COUNT(*) as total FROM runtime.errors ${where}`,
+      params
+    );
+    const total = Number((countResult as any[])[0]?.total ?? 0);
+
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.errors ${where} ORDER BY date DESC LIMIT ${filters.limit} OFFSET ${filters.offset}`,
+      params
+    );
+
+    return { rows: rows as any[], total };
+  }
+
+  async getErrorStats(): Promise<ErrorStats> {
+    const [totalResult, typeResult, channelResult, vendorResult, recentResult] = await Promise.all([
+      queryNoDb("SELECT COUNT(*) as total FROM runtime.errors"),
+      queryNoDb("SELECT type, COUNT(*) as cnt FROM runtime.errors WHERE type IS NOT NULL GROUP BY type ORDER BY cnt DESC"),
+      queryNoDb("SELECT channelName, COUNT(*) as cnt FROM runtime.errors WHERE channelName IS NOT NULL GROUP BY channelName ORDER BY cnt DESC"),
+      queryNoDb("SELECT vendor, COUNT(*) as cnt FROM runtime.errors WHERE vendor IS NOT NULL GROUP BY vendor ORDER BY cnt DESC"),
+      queryNoDb("SELECT DATE(date) as day, COUNT(*) as cnt FROM runtime.errors GROUP BY DATE(date) ORDER BY day DESC LIMIT 30"),
+    ]);
+
+    return {
+      total: Number((totalResult as any[])[0]?.total ?? 0),
+      byType: typeResult as any[],
+      byChannel: channelResult as any[],
+      byVendor: vendorResult as any[],
+      recentByDay: recentResult as any[],
+    };
+  }
+
+  async getErrorById(id: number): Promise<ErrorRow | null> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.errors WHERE _id = ?`,
+      [id]
+    );
+    return (rows as any[])[0] || null;
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {

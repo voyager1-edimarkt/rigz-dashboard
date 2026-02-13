@@ -12,6 +12,7 @@ import Customers from "@/pages/customers";
 import Orders, { OrderDetailPage } from "@/pages/orders";
 import Products from "@/pages/products";
 import PurchaseOrders, { PurchaseOrderDetailPage } from "@/pages/purchase-orders";
+import Errors from "@/pages/errors";
 import Suppliers from "@/pages/suppliers";
 import Vendors from "@/pages/vendors";
 import Warehouses from "@/pages/warehouses";
@@ -71,6 +72,9 @@ function AppContent() {
                 {(params: { id: string }) => (
                   <PurchaseOrderDetailPage poId={Number(params.id)} />
                 )}
+              </Route>
+              <Route path="/errors">
+                <Errors />
               </Route>
               <Route path="/suppliers">
                 <Suppliers />

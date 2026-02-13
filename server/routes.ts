@@ -293,6 +293,45 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/errors/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getErrorStats();
+      res.json(stats);
+    } catch (err: any) {
+      log(`Error fetching error stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/errors/:id", async (req, res) => {
+    try {
+      const error = await storage.getErrorById(Number(req.params.id));
+      if (!error) {
+        return res.status(404).json({ message: "Error not found" });
+      }
+      res.json(error);
+    } catch (err: any) {
+      log(`Error fetching error detail: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/errors", async (req, res) => {
+    try {
+      const result = await storage.getErrors({
+        limit: Math.min(Number(req.query.limit) || 25, 100),
+        offset: Number(req.query.offset) || 0,
+        search: (req.query.search as string) || undefined,
+        type: (req.query.type as string) || undefined,
+        channelName: (req.query.channelName as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching errors: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/warehouses", async (_req, res) => {
     try {
       const result = await storage.getWarehouses();
