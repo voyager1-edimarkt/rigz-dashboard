@@ -81,6 +81,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import truckIcon from "@assets/image_1770956177786.png";
 import { ArrowLeft } from "lucide-react";
 
 interface OrderRow {
@@ -1872,9 +1873,7 @@ export default function Orders() {
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
-                              <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
-                            </div>
+                            <img src={truckIcon} alt="" className="w-7 h-7 shrink-0" />
                             <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
                               {row.orderNumber}
                             </span>
