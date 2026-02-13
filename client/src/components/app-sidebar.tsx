@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Database, Table2, Eye, Terminal, LayoutDashboard, RefreshCw, ChevronDown } from "lucide-react";
+import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +91,16 @@ export function AppSidebar({
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/customers" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/customers")}
+                data-testid="button-customers"
+              >
+                <Users className="w-4 h-4" />
+                <span>Customers</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
