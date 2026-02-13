@@ -19,6 +19,16 @@ import type {
   PurchaseOrderDetail,
   PurchaseOrderDataRow,
   PurchaseOrderFilters,
+  SupplierRow,
+  SupplierListResult,
+  SupplierStats,
+  SupplierFilters,
+  VendorRow,
+  VendorListResult,
+  VendorStats,
+  VendorFilters,
+  WarehouseRow,
+  WarehouseListResult,
   TableDataResult,
 } from "@shared/schema";
 
@@ -40,5 +50,12 @@ export interface IStorage {
   getPurchaseOrderStats(): Promise<PurchaseOrderStats>;
   getPurchaseOrderById(id: number): Promise<PurchaseOrderDetail | null>;
   getPurchaseOrderHistory(poId: number): Promise<PurchaseOrderDataRow[]>;
+  getSuppliers(filters: SupplierFilters): Promise<SupplierListResult>;
+  getSupplierStats(): Promise<SupplierStats>;
+  getSupplierByName(name: string): Promise<SupplierRow | null>;
+  getVendors(filters: VendorFilters): Promise<VendorListResult>;
+  getVendorStats(): Promise<VendorStats>;
+  getVendorByName(name: string): Promise<VendorRow | null>;
+  getWarehouses(): Promise<WarehouseListResult>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

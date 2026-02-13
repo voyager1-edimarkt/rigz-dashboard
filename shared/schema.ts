@@ -229,6 +229,89 @@ export interface PurchaseOrderFilters {
   vendor?: string;
 }
 
+export interface SupplierRow {
+  name: string;
+  currentIndex: number;
+  useCarrierDetermination: number;
+  favouriteCarrier: string | null;
+  validateAddresses: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierListResult {
+  rows: SupplierRow[];
+  total: number;
+}
+
+export interface SupplierStats {
+  total: number;
+  withCarrierDetermination: number;
+  withAddressValidation: number;
+  avgIndex: number;
+}
+
+export interface SupplierFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+}
+
+export interface VendorRow {
+  name: string;
+  status: string;
+  deleted: any;
+  crmId: string | null;
+  companyName: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  country: string | null;
+  email: string | null;
+  secondaryEmail: string | null;
+  phone: string | null;
+  officePhone: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorListResult {
+  rows: VendorRow[];
+  total: number;
+}
+
+export interface VendorStats {
+  total: number;
+  syncedCount: number;
+  toSyncCount: number;
+  deletedCount: number;
+  withAddress: number;
+  withEmail: number;
+  withPhone: number;
+  byState: { state: string | null; cnt: number }[];
+}
+
+export interface VendorFilters {
+  limit: number;
+  offset: number;
+  search?: string;
+  status?: string;
+  state?: string;
+}
+
+export interface WarehouseRow {
+  name: string;
+  crmId: string;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface WarehouseListResult {
+  rows: WarehouseRow[];
+  total: number;
+}
+
 export interface CustomerFilters {
   limit: number;
   offset: number;

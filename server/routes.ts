@@ -217,6 +217,92 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/suppliers", async (req, res) => {
+    try {
+      const result = await storage.getSuppliers({
+        limit: Math.min(Number(req.query.limit) || 25, 100),
+        offset: Number(req.query.offset) || 0,
+        search: (req.query.search as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching suppliers: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/suppliers/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getSupplierStats();
+      res.json(stats);
+    } catch (err: any) {
+      log(`Error fetching supplier stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/suppliers/:name", async (req, res) => {
+    try {
+      const supplier = await storage.getSupplierByName(req.params.name);
+      if (!supplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json(supplier);
+    } catch (err: any) {
+      log(`Error fetching supplier detail: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/vendors", async (req, res) => {
+    try {
+      const result = await storage.getVendors({
+        limit: Math.min(Number(req.query.limit) || 25, 100),
+        offset: Number(req.query.offset) || 0,
+        search: (req.query.search as string) || undefined,
+        status: (req.query.status as string) || undefined,
+        state: (req.query.state as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching vendors: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/vendors/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getVendorStats();
+      res.json(stats);
+    } catch (err: any) {
+      log(`Error fetching vendor stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/vendors/:name", async (req, res) => {
+    try {
+      const vendor = await storage.getVendorByName(req.params.name);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (err: any) {
+      log(`Error fetching vendor detail: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/warehouses", async (_req, res) => {
+    try {
+      const result = await storage.getWarehouses();
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching warehouses: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);

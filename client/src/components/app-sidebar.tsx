@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, RefreshCw, ChevronDown } from "lucide-react";
+import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -131,6 +131,36 @@ export function AppSidebar({
               >
                 <ClipboardList className="w-4 h-4" />
                 <span>Purchase Orders</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/suppliers" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/suppliers")}
+                data-testid="button-suppliers"
+              >
+                <Truck className="w-4 h-4" />
+                <span>Suppliers</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/vendors" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/vendors")}
+                data-testid="button-vendors"
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Vendors</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/warehouses" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/warehouses")}
+                data-testid="button-warehouses"
+              >
+                <Warehouse className="w-4 h-4" />
+                <span>Warehouses</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

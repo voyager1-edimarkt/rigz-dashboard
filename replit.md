@@ -23,6 +23,9 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `client/src/pages/orders.tsx` - Orders management with stats, search, status filter, detail sheet with parsed JSON content
 - `client/src/pages/products.tsx` - Products management with stats, search, vendor/location/status filters, detail sheet
 - `client/src/pages/purchase-orders.tsx` - Purchase orders management with stats, search, vendor/status filters, detail page with multi-tab interface (Overview, PO Details, Line Items, Invoices, Activity Log)
+- `client/src/pages/suppliers.tsx` - Suppliers management with stats cards, search, table, detail sheet
+- `client/src/pages/vendors.tsx` - Vendors management with stats, search, status/state filters, table, detail sheet with address/contact sections
+- `client/src/pages/warehouses.tsx` - Warehouses management with card-based grid layout, detail sheet
 - `client/src/pages/dashboard.tsx` - Dashboard with US/Canada maps showing customer distribution
 - `client/src/components/connection-badge.tsx` - Connection status indicator
 - `shared/schema.ts` - TypeScript types and Zod schemas
@@ -41,6 +44,13 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/orders/:id/history` - Order history from order_data table (status changes, inbound/outbound content)
 - `GET /api/products?limit=&offset=&search=&status=&vendor=&location=&active=` - Paginated product list
 - `GET /api/products/stats` - Product statistics (total, active, synced, deleted, avg price, by vendor, by location)
+- `GET /api/suppliers?limit=&offset=&search=` - Paginated supplier list
+- `GET /api/suppliers/stats` - Supplier statistics
+- `GET /api/suppliers/:name` - Supplier detail by name
+- `GET /api/vendors?limit=&offset=&search=&status=&state=` - Paginated vendor list
+- `GET /api/vendors/stats` - Vendor statistics (total, synced, toSync, deleted, contact info, by state)
+- `GET /api/vendors/:name` - Vendor detail by name
+- `GET /api/warehouses` - All warehouses
 - `GET /api/purchase-orders?limit=&offset=&search=&status=&vendor=` - Paginated purchase order list
 - `GET /api/purchase-orders/stats` - Purchase order statistics (total, by status, by vendor, recent by day)
 - `GET /api/purchase-orders/:id` - Purchase order detail with content and invoiceContent JSON
@@ -52,6 +62,9 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Suppliers page with stats cards, searchable table, detail sheet with carrier/address validation settings
+- 2026-02-13: Added Vendors page with stats cards, search, status/state filters, table with contact info, detail sheet with company/address/contact sections
+- 2026-02-13: Added Warehouses page with card-based grid layout (3 warehouses), detail sheet
 - 2026-02-13: Added Purchase Orders page with stats cards, vendor/status filters, searchable table, full-page detail view with 5-tab interface (Overview, PO Details, Line Items, Invoices, Activity Log), ContentViewerDialog for EDI/JSON history
 - 2026-02-13: Added Products page with stats cards, top vendors/warehouse bar charts, searchable/filterable table (SKU, status, vendor, location, active), and detail sheet with pricing/margin info
 - 2026-02-13: Comprehensive 9-tab order detail page: Overview (summary cards, timeline, metadata), Order Details (deep dive), Line Items (filter/sort/stats), Financials (summary + breakdown), Supplier, Customer & Shipping, Documents (viewer dialogs), Invoices (conditional with discrepancy warning), Activity Log

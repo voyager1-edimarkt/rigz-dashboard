@@ -19,6 +19,16 @@ import type {
   PurchaseOrderDetail,
   PurchaseOrderDataRow,
   PurchaseOrderFilters,
+  SupplierRow,
+  SupplierListResult,
+  SupplierStats,
+  SupplierFilters,
+  VendorRow,
+  VendorListResult,
+  VendorStats,
+  VendorFilters,
+  WarehouseRow,
+  WarehouseListResult,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -352,6 +362,125 @@ export class MySQLStorage implements IStorage {
       [poId]
     );
     return rows as any[];
+  }
+
+  async getSuppliers(filters: SupplierFilters): Promise<SupplierListResult> {
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (filters.search) {
+      where += " AND (name LIKE ? OR favouriteCarrier LIKE ?)";
+      const s = `%${filters.search}%`;
+      params.push(s, s);
+    }
+
+    const countResult = await queryNoDb(
+      `SELECT COUNT(*) as total FROM runtime.suppliers ${where}`,
+      params
+    );
+    const total = Number((countResult as any[])[0]?.total ?? 0);
+
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.suppliers ${where} ORDER BY name ASC LIMIT ${filters.limit} OFFSET ${filters.offset}`,
+      params
+    );
+
+    return { rows: rows as any[], total };
+  }
+
+  async getSupplierStats(): Promise<SupplierStats> {
+    const [totalResult, carrierResult, addressResult, avgResult] = await Promise.all([
+      queryNoDb("SELECT COUNT(*) as total FROM runtime.suppliers"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.suppliers WHERE useCarrierDetermination = 1"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.suppliers WHERE validateAddresses = 1"),
+      queryNoDb("SELECT AVG(currentIndex) as avg_idx FROM runtime.suppliers"),
+    ]);
+
+    return {
+      total: Number((totalResult as any[])[0]?.total ?? 0),
+      withCarrierDetermination: Number((carrierResult as any[])[0]?.cnt ?? 0),
+      withAddressValidation: Number((addressResult as any[])[0]?.cnt ?? 0),
+      avgIndex: Number((avgResult as any[])[0]?.avg_idx ?? 0),
+    };
+  }
+
+  async getSupplierByName(name: string): Promise<SupplierRow | null> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.suppliers WHERE name = ?`,
+      [name]
+    );
+    return (rows as any[])[0] || null;
+  }
+
+  async getVendors(filters: VendorFilters): Promise<VendorListResult> {
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (filters.search) {
+      where += " AND (name LIKE ? OR companyName LIKE ? OR crmId LIKE ? OR email LIKE ?)";
+      const s = `%${filters.search}%`;
+      params.push(s, s, s, s);
+    }
+    if (filters.status) {
+      where += " AND status = ?";
+      params.push(filters.status);
+    }
+    if (filters.state) {
+      where += " AND state = ?";
+      params.push(filters.state);
+    }
+
+    const countResult = await queryNoDb(
+      `SELECT COUNT(*) as total FROM runtime.vendors ${where}`,
+      params
+    );
+    const total = Number((countResult as any[])[0]?.total ?? 0);
+
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.vendors ${where} ORDER BY name ASC LIMIT ${filters.limit} OFFSET ${filters.offset}`,
+      params
+    );
+
+    return { rows: rows as any[], total };
+  }
+
+  async getVendorStats(): Promise<VendorStats> {
+    const [totalResult, syncedResult, toSyncResult, deletedResult, addressResult, emailResult, phoneResult, stateResult] = await Promise.all([
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE status = 'SYNCED'"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE status = 'TOSYNC'"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE deleted = 1"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE address IS NOT NULL AND address != ''"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE email IS NOT NULL AND email != ''"),
+      queryNoDb("SELECT COUNT(*) as cnt FROM runtime.vendors WHERE phone IS NOT NULL AND phone != ''"),
+      queryNoDb("SELECT state, COUNT(*) as cnt FROM runtime.vendors WHERE state IS NOT NULL AND state != '' GROUP BY state ORDER BY cnt DESC LIMIT 15"),
+    ]);
+
+    return {
+      total: Number((totalResult as any[])[0]?.cnt ?? 0),
+      syncedCount: Number((syncedResult as any[])[0]?.cnt ?? 0),
+      toSyncCount: Number((toSyncResult as any[])[0]?.cnt ?? 0),
+      deletedCount: Number((deletedResult as any[])[0]?.cnt ?? 0),
+      withAddress: Number((addressResult as any[])[0]?.cnt ?? 0),
+      withEmail: Number((emailResult as any[])[0]?.cnt ?? 0),
+      withPhone: Number((phoneResult as any[])[0]?.cnt ?? 0),
+      byState: stateResult as any[],
+    };
+  }
+
+  async getVendorByName(name: string): Promise<VendorRow | null> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.vendors WHERE name = ?`,
+      [name]
+    );
+    return (rows as any[])[0] || null;
+  }
+
+  async getWarehouses(): Promise<WarehouseListResult> {
+    const rows = await queryNoDb(
+      `SELECT * FROM runtime.warehouses ORDER BY name ASC`
+    );
+    return { rows: rows as any[], total: (rows as any[]).length };
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {
