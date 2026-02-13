@@ -830,14 +830,16 @@ export class MySQLStorage implements IStorage {
 
   async getStaleProducts(recentDays: number = 30, previousDays: number = 60): Promise<StaleProduct[]> {
     const previousSkusQuery = `
-      SELECT jt.sku, SUM(jt.qty) as totalQty, COUNT(DISTINCT o.id) as orderCount,
-             MAX(o.orderDate) as lastOrderDate
+      SELECT jt.sku, SUM(GREATEST(COALESCE(jt.acceptedQty,0), COALESCE(jt.requestedQty,0))) as totalQty,
+             COUNT(DISTINCT o.id) as orderCount, MAX(o.orderDate) as lastOrderDate
       FROM runtime.orders o,
       JSON_TABLE(o.content, '$.items[*]' COLUMNS(
         sku VARCHAR(100) PATH '$.sku',
-        qty DECIMAL(12,2) PATH '$.acceptedQuantity'
+        acceptedQty DECIMAL(12,2) PATH '$.acceptedQuantity',
+        requestedQty DECIMAL(12,2) PATH '$.requestedQuantity'
       )) jt
-      WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+      WHERE GREATEST(COALESCE(jt.acceptedQty,0), COALESCE(jt.requestedQty,0)) > 0
+        AND jt.sku IS NOT NULL
         AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
         AND o.orderDate >= DATE_SUB(NOW(), INTERVAL ? DAY)
         AND o.orderDate < DATE_SUB(NOW(), INTERVAL ? DAY)
@@ -849,9 +851,11 @@ export class MySQLStorage implements IStorage {
       FROM runtime.orders o,
       JSON_TABLE(o.content, '$.items[*]' COLUMNS(
         sku VARCHAR(100) PATH '$.sku',
-        qty DECIMAL(12,2) PATH '$.acceptedQuantity'
+        acceptedQty DECIMAL(12,2) PATH '$.acceptedQuantity',
+        requestedQty DECIMAL(12,2) PATH '$.requestedQuantity'
       )) jt
-      WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+      WHERE GREATEST(COALESCE(jt.acceptedQty,0), COALESCE(jt.requestedQty,0)) > 0
+        AND jt.sku IS NOT NULL
         AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
         AND o.orderDate >= DATE_SUB(NOW(), INTERVAL ? DAY)
     `;
