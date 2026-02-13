@@ -36,6 +36,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/orders?limit=&offset=&search=&status=` - Paginated orders list
 - `GET /api/orders/stats` - Order statistics (total, by status, recent by day)
 - `GET /api/orders/:id` - Order detail with full JSON content fields
+- `GET /api/orders/:id/history` - Order history from order_data table (status changes, inbound/outbound content)
 - `POST /api/query` - Execute custom SQL
 
 ## Environment Variables
@@ -43,6 +44,8 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added order history (order_data table) to order detail sheet with timeline view showing status changes and expandable inbound/outbound content
+- 2026-02-13: Changed order detail from modal dialog to side sheet (matching customers page)
 - 2026-02-13: Refactored backend to use IStorage interface + MySQLStorage pattern (routes no longer contain direct SQL)
 - 2026-02-13: Updated color palette to red/black/white brand theme
 - 2026-02-13: Replaced pie chart with line chart for recent order activity on Dashboard
