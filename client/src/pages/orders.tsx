@@ -262,7 +262,7 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0" data-testid="modal-order-detail">
+      <DialogContent className="sm:max-w-2xl h-[80vh] flex flex-col p-0 gap-0" data-testid="modal-order-detail">
         {isLoading ? (
           <div className="space-y-4 p-6">
             <Skeleton className="h-8 w-48" />
