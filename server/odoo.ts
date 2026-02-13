@@ -98,21 +98,25 @@ export class OdooClient {
   ): Promise<any> {
     await this.authenticate();
 
+    const callArgs: any[] = [
+      this.config.db,
+      this.uid,
+      this.config.password,
+      model,
+      method,
+      args,
+    ];
+    if (kwargs && Object.keys(kwargs).length > 0) {
+      callArgs.push(kwargs);
+    }
+
     const resp = await this.jsonRpc({
       jsonrpc: "2.0",
       method: "call",
       params: {
         service: "object",
         method: "execute_kw",
-        args: [
-          this.config.db,
-          this.uid,
-          this.config.password,
-          model,
-          method,
-          args,
-        ],
-        kwargs: kwargs || {},
+        args: callArgs,
         id: Date.now(),
       },
     });
@@ -128,35 +132,14 @@ export class OdooClient {
     limit?: number,
     order?: string
   ): Promise<any[]> {
-    await this.authenticate();
-
     const kwargs: Record<string, any> = {};
     if (fields.length > 0) kwargs.fields = fields;
     if (offset !== undefined) kwargs.offset = offset;
     if (limit !== undefined) kwargs.limit = limit;
     if (order) kwargs.order = order;
 
-    const resp = await this.jsonRpc({
-      jsonrpc: "2.0",
-      method: "call",
-      params: {
-        service: "object",
-        method: "execute_kw",
-        args: [
-          this.config.db,
-          this.uid,
-          this.config.password,
-          model,
-          "search_read",
-          [filters],
-        ],
-        kwargs: kwargs,
-        id: Date.now(),
-      },
-    });
-
-    const records = resp.result || [];
-    if (fields.length > 0) {
+    const records = await this.executeKw(model, "search_read", [filters], kwargs);
+    if (fields.length > 0 && Array.isArray(records)) {
       return records.map((r: any) => {
         const filtered: any = { id: r.id };
         for (const f of fields) {
@@ -165,7 +148,7 @@ export class OdooClient {
         return filtered;
       });
     }
-    return records;
+    return records || [];
   }
 
   async searchCount(model: string, filters: any[] = []): Promise<number> {
