@@ -124,6 +124,77 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/customers", async (req, res) => {
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+    const search = (req.query.search as string) || "";
+    const status = (req.query.status as string) || "";
+    const state = (req.query.state as string) || "";
+
+    try {
+      let where = "WHERE 1=1";
+      const params: any[] = [];
+
+      if (search) {
+        where += " AND (c.name LIKE ? OR c.companyName LIKE ? OR c.city LIKE ? OR c.email LIKE ?)";
+        const s = `%${search}%`;
+        params.push(s, s, s, s);
+      }
+      if (status) {
+        where += " AND c.status = ?";
+        params.push(status);
+      }
+      if (state) {
+        where += " AND c.state = ?";
+        params.push(state);
+      }
+
+      const countResult = await queryNoDb(
+        `SELECT COUNT(*) as total FROM runtime.customers c ${where}`,
+        params
+      );
+      const total = Number((countResult as any[])[0]?.total ?? 0);
+
+      const rows = await queryNoDb(
+        `SELECT c.name, c.companyName, c.address, c.city, c.state, c.zip, c.country, c.email, c.phone, c.status, c.parent, c.priceLevel, c.createdAt, c.updatedAt
+         FROM runtime.customers c ${where}
+         ORDER BY c.companyName ASC
+         LIMIT ${limit} OFFSET ${offset}`,
+        params
+      );
+
+      res.json({ rows, total });
+    } catch (err: any) {
+      log(`Error fetching customers: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/customers/stats", async (_req, res) => {
+    try {
+      const [totalResult, statusResult, stateResult, countryResult, recentResult, parentResult] = await Promise.all([
+        queryNoDb("SELECT COUNT(*) as total FROM runtime.customers"),
+        queryNoDb("SELECT status, COUNT(*) as cnt FROM runtime.customers GROUP BY status"),
+        queryNoDb("SELECT state, COUNT(*) as cnt FROM runtime.customers WHERE state IS NOT NULL AND state != '' GROUP BY state ORDER BY cnt DESC LIMIT 10"),
+        queryNoDb("SELECT country, COUNT(*) as cnt FROM runtime.customers WHERE country IS NOT NULL GROUP BY country ORDER BY cnt DESC"),
+        queryNoDb("SELECT name, companyName, city, state, country, createdAt FROM runtime.customers ORDER BY createdAt DESC LIMIT 5"),
+        queryNoDb("SELECT COUNT(DISTINCT parent) as cnt FROM runtime.customers WHERE parent IS NOT NULL"),
+      ]);
+
+      res.json({
+        total: Number((totalResult as any[])[0]?.total ?? 0),
+        byStatus: statusResult,
+        byState: stateResult,
+        byCountry: countryResult,
+        recent: recentResult,
+        parentAccounts: Number((parentResult as any[])[0]?.cnt ?? 0),
+      });
+    } catch (err: any) {
+      log(`Error fetching customer stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);
