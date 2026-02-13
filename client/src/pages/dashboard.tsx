@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -109,8 +110,20 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const [pipelineDateFrom, setPipelineDateFrom] = useState("");
-  const [pipelineDateTo, setPipelineDateTo] = useState("");
+  const [pipelinePreset, setPipelinePreset] = useState("all");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+
+  const { pipelineDateFrom, pipelineDateTo } = useMemo(() => {
+    if (pipelinePreset === "all") return { pipelineDateFrom: "", pipelineDateTo: "" };
+    if (pipelinePreset === "custom") return { pipelineDateFrom: customDateFrom, pipelineDateTo: customDateTo };
+    const days = Number(pipelinePreset);
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - days);
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+    return { pipelineDateFrom: fmt(from), pipelineDateTo: fmt(to) };
+  }, [pipelinePreset, customDateFrom, customDateTo]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<CustomerStats>({
     queryKey: ["/api/customers/stats"],
@@ -304,24 +317,39 @@ export default function Dashboard() {
             <CardTitle className="text-sm">Order Pipeline</CardTitle>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                type="date"
-                value={pipelineDateFrom}
-                onChange={(e) => setPipelineDateFrom(e.target.value)}
-                className="w-[130px] h-8 text-xs"
-                data-testid="input-pipeline-date-from"
-              />
-              <span className="text-xs text-muted-foreground">to</span>
-              <Input
-                type="date"
-                value={pipelineDateTo}
-                onChange={(e) => setPipelineDateTo(e.target.value)}
-                className="w-[130px] h-8 text-xs"
-                data-testid="input-pipeline-date-to"
-              />
-            </div>
+            <Select value={pipelinePreset} onValueChange={setPipelinePreset}>
+              <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-pipeline-date-range">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="15">Last 15 Days</SelectItem>
+                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="45">Last 45 Days</SelectItem>
+                <SelectItem value="60">Last 60 Days</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+            {pipelinePreset === "custom" && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="w-[130px] h-8 text-xs"
+                  data-testid="input-pipeline-date-from"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-[130px] h-8 text-xs"
+                  data-testid="input-pipeline-date-to"
+                />
+              </div>
+            )}
             <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
           </div>
         </CardHeader>
