@@ -8,9 +8,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConnectionBadge } from "@/components/connection-badge";
+import Dashboard from "@/pages/dashboard";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
-import Welcome from "@/pages/welcome";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 
@@ -48,10 +48,11 @@ function AppContent() {
           <main className="flex-1 min-h-0 overflow-hidden">
             <Switch>
               <Route path="/">
-                {selectedDatabase && selectedTable ? (
-                  <TableView database={selectedDatabase} table={selectedTable} />
-                ) : (
-                  <Welcome />
+                <Dashboard />
+              </Route>
+              <Route path="/table/:database/:table">
+                {(params: { database: string; table: string }) => (
+                  <TableView database={params.database} table={params.table} />
                 )}
               </Route>
               <Route path="/query">

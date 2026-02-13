@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Database, Table2, Eye, Terminal, Loader2, RefreshCw, ChevronDown } from "lucide-react";
+import { Database, Table2, Eye, Terminal, LayoutDashboard, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,7 +38,7 @@ export function AppSidebar({
   onSelectDatabase,
   onSelectTable,
 }: AppSidebarProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [openDbs, setOpenDbs] = useState<Record<string, boolean>>({});
 
   const { data: databases, isLoading: dbLoading } = useQuery<DatabaseInfo[]>({
@@ -81,6 +81,21 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/")}
+                data-testid="button-dashboard"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
         <SidebarGroup>
           <div className="flex items-center justify-between gap-2 px-2">
             <SidebarGroupLabel>Databases</SidebarGroupLabel>
@@ -139,10 +154,10 @@ export function AppSidebar({
                               {realTables.map((table) => (
                                 <SidebarMenuItem key={table.name}>
                                   <SidebarMenuButton
-                                    className={selectedTable === table.name ? "bg-sidebar-accent" : ""}
+                                    className={selectedTable === table.name && location.startsWith("/table/") ? "bg-sidebar-accent" : ""}
                                     onClick={() => {
                                       onSelectTable(table.name);
-                                      setLocation("/");
+                                      setLocation(`/table/${db.name}/${table.name}`);
                                     }}
                                     data-testid={`button-table-${table.name}`}
                                   >
@@ -166,10 +181,10 @@ export function AppSidebar({
                               {views.map((view) => (
                                 <SidebarMenuItem key={view.name}>
                                   <SidebarMenuButton
-                                    className={selectedTable === view.name ? "bg-sidebar-accent" : ""}
+                                    className={selectedTable === view.name && location.startsWith("/table/") ? "bg-sidebar-accent" : ""}
                                     onClick={() => {
                                       onSelectTable(view.name);
-                                      setLocation("/");
+                                      setLocation(`/table/${db.name}/${view.name}`);
                                     }}
                                     data-testid={`button-view-${view.name}`}
                                   >
@@ -200,6 +215,7 @@ export function AppSidebar({
 
       <SidebarFooter className="p-3">
         <SidebarMenuButton
+          className={location === "/query" ? "bg-sidebar-accent" : ""}
           onClick={() => setLocation("/query")}
           data-testid="button-query-runner"
         >
