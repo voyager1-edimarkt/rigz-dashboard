@@ -976,7 +976,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
         </Button>
       </div>
       {isLoading ? (
-        <div className="p-6 space-y-5 max-w-3xl mx-auto w-full">
+        <div className="p-6 space-y-5">
           <div className="flex items-center gap-4">
             <Skeleton className="h-14 w-14 rounded-xl" />
             <div className="space-y-2 flex-1">
@@ -996,7 +996,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
           </div>
         </div>
       ) : order ? (
-        <div className="max-w-3xl mx-auto w-full px-6 pb-6">
+        <div className="px-4 pb-6">
           <div className="pb-4 border-b mb-5 bg-gradient-to-b from-red-500/5 to-transparent rounded-lg px-5 pt-5">
             <div className="flex items-center gap-4 pb-3">
               <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
@@ -1035,11 +1035,9 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
           <div className="py-2">
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <InfoCard icon={Hash} label="Order Number" value={order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
                     <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
                     <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
                     <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
                   </div>
