@@ -444,7 +444,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 justify-center mt-1" data-testid="legend-us">
                   <span className="text-[10px] text-muted-foreground">0</span>
                   <div className="flex h-1.5 rounded-full overflow-hidden">
-                    {["#f1f5f9", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1e40af"].map((c) => (
+                    {["#f1f5f9", "#fecaca", "#f87171", "#dc2626", "#b91c1c", "#991b1b", "#7f1d1d"].map((c) => (
                       <div key={c} className="w-5 h-1.5" style={{ backgroundColor: c }} />
                     ))}
                   </div>
@@ -515,7 +515,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 justify-center mt-1" data-testid="legend-ca">
                   <span className="text-[10px] text-muted-foreground">0</span>
                   <div className="flex h-1.5 rounded-full overflow-hidden">
-                    {["#f1f5f9", "#a7f3d0", "#6ee7b7", "#34d399", "#059669", "#047857", "#065f46"].map((c) => (
+                    {["#f1f5f9", "#d6d3d1", "#a8a29e", "#78716c", "#44403c", "#292524", "#1c1917"].map((c) => (
                       <div key={c} className="w-5 h-1.5" style={{ backgroundColor: c }} />
                     ))}
                   </div>
