@@ -21,11 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   ShoppingCart,
   Package,
@@ -239,7 +239,7 @@ function CapsuleTabs({ tabs, active, onChange }: { tabs: TabDef[]; active: strin
   );
 }
 
-function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
+function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState("order");
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
@@ -288,8 +288,8 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
   ];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl h-[80vh] flex flex-col p-0 gap-0" data-testid="modal-order-detail">
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg p-0" data-testid="sheet-order-detail">
         {isLoading ? (
           <div className="p-8 space-y-5">
             <div className="flex items-center gap-4">
@@ -312,16 +312,16 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
           </div>
         ) : order ? (
           <>
-            <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-gradient-to-b from-blue-500/5 to-transparent">
-              <DialogHeader className="pb-4">
+            <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent">
+              <SheetHeader className="pb-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shadow-blue-500/20">
+                  <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20">
                     <ShoppingCart className="w-6 h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <DialogTitle className="text-xl font-bold" data-testid="text-detail-order-number">
+                    <SheetTitle className="text-xl font-bold" data-testid="text-detail-order-number">
                       Order #{order.orderNumber}
-                    </DialogTitle>
+                    </SheetTitle>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {order.id}</p>
                   </div>
                 </div>
@@ -345,11 +345,11 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
                     {order.country}
                   </Badge>
                 </div>
-              </DialogHeader>
+              </SheetHeader>
               <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 pt-5">
+            <div className="p-6 pt-5">
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 gap-3">
@@ -535,8 +535,8 @@ function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; 
             <p className="text-sm text-muted-foreground">Order not found</p>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -746,7 +746,7 @@ export default function Orders() {
         </CardContent>
       </Card>
 
-      <OrderDetailModal
+      <OrderDetailSheet
         orderId={selectedOrderId}
         open={selectedOrderId !== null}
         onClose={() => setSelectedOrderId(null)}
