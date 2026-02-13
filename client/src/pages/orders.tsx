@@ -954,7 +954,7 @@ function OrderTimeline({ steps }: { steps: { label: string; date: string | null;
           <div key={i} className="flex items-center flex-1 min-w-0">
             <div className="flex flex-col items-center gap-1">
               {isShipment ? (
-                <img src={shipmentTruckImg} alt="Shipment" className={`w-6 h-6 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
+                <img src={shipmentTruckImg} alt="Shipment" className={`w-10 h-10 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
               ) : (
                 <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
               )}
