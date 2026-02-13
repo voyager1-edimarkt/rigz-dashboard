@@ -69,7 +69,7 @@ export function AppSidebar({
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-3">
+      <SidebarHeader className="p-3 flex items-center justify-start">
         <img src={rigzLogo} alt="RIGZ" className="h-6 w-auto object-contain" data-testid="img-logo" />
       </SidebarHeader>
 
