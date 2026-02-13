@@ -27,6 +27,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   ShoppingCart,
   Package,
   FileText,
@@ -57,7 +64,14 @@ import {
   Zap,
   Eye,
   EyeOff,
+  Copy,
+  Check,
+  Code,
+  LayoutList,
+  Store,
+  Mail,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 
@@ -262,6 +276,476 @@ interface OrderDataRow {
   outboundType: string | null;
 }
 
+function parseEDI(raw: string): { segments: { id: string; elements: string[] }[]; poNumber?: string; buyer?: { name: string; code: string }; seller?: { name: string; code: string }; buyerAddress?: { street: string; city: string; state: string; zip: string }; items: { sku: string; vendorNo: string; qty: string; price: string; uom: string; desc: string }[] } | null {
+  if (!raw || !raw.includes("~")) return null;
+  try {
+    const segs = raw.split("~").filter(s => s.trim()).map(s => {
+      const parts = s.trim().split("*");
+      return { id: parts[0], elements: parts.slice(1) };
+    });
+    let poNumber: string | undefined;
+    let buyer: { name: string; code: string } | undefined;
+    let seller: { name: string; code: string } | undefined;
+    let buyerAddress: { street: string; city: string; state: string; zip: string } | undefined;
+    const items: { sku: string; vendorNo: string; qty: string; price: string; uom: string; desc: string }[] = [];
+    let lastN1Type: string | undefined;
+    let currentItem: any = {};
+
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (seg.id === "BEG" && seg.elements.length >= 3) {
+        poNumber = seg.elements[2];
+      } else if (seg.id === "N1") {
+        lastN1Type = seg.elements[0];
+        const name = seg.elements[1] || "";
+        const code = seg.elements[3] || "";
+        if (lastN1Type === "BY") buyer = { name, code };
+        else if (lastN1Type === "SE") seller = { name, code };
+      } else if (seg.id === "N3" && lastN1Type === "BY") {
+        buyerAddress = { street: seg.elements[0] || "", city: "", state: "", zip: "" };
+      } else if (seg.id === "N4" && lastN1Type === "BY" && buyerAddress) {
+        buyerAddress.city = seg.elements[0] || "";
+        buyerAddress.state = seg.elements[1] || "";
+        buyerAddress.zip = seg.elements[2] || "";
+      } else if (seg.id === "PO1") {
+        currentItem = {
+          qty: seg.elements[1] || "0",
+          uom: seg.elements[2] || "",
+          price: seg.elements[3] || "0",
+          sku: "",
+          vendorNo: "",
+          desc: "",
+        };
+        for (let j = 4; j < seg.elements.length - 1; j++) {
+          if (seg.elements[j] === "VC") currentItem.sku = seg.elements[j + 1] || "";
+          if (seg.elements[j] === "IN") currentItem.vendorNo = seg.elements[j + 1] || "";
+        }
+        items.push(currentItem);
+      } else if (seg.id === "PID" && items.length > 0) {
+        items[items.length - 1].desc = seg.elements[3] || seg.elements[4] || "";
+      }
+    }
+    return { segments: segs, poNumber, buyer, seller, buyerAddress, items };
+  } catch {
+    return null;
+  }
+}
+
+function ParsedEDIView({ raw }: { raw: string }) {
+  const parsed = parseEDI(raw);
+  if (!parsed) {
+    return (
+      <pre className="text-xs font-mono bg-muted/30 rounded-lg p-4 overflow-auto max-h-96 whitespace-pre-wrap break-words">
+        {raw}
+      </pre>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {parsed.poNumber && (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs font-mono">PO #{parsed.poNumber}</Badge>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {parsed.buyer && (
+          <div className="rounded-lg border border-border/50 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Store className="w-3.5 h-3.5 text-blue-500" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Buyer</p>
+            </div>
+            <p className="text-sm font-medium">{parsed.buyer.name}</p>
+            {parsed.buyer.code && <p className="text-xs text-muted-foreground font-mono">{parsed.buyer.code}</p>}
+            {parsed.buyerAddress && (
+              <p className="text-xs text-muted-foreground">
+                {parsed.buyerAddress.street.trim()}, {parsed.buyerAddress.city}, {parsed.buyerAddress.state} {parsed.buyerAddress.zip}
+              </p>
+            )}
+          </div>
+        )}
+        {parsed.seller && (
+          <div className="rounded-lg border border-border/50 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Building2 className="w-3.5 h-3.5 text-emerald-500" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Seller</p>
+            </div>
+            <p className="text-sm font-medium">{parsed.seller.name}</p>
+            {parsed.seller.code && <p className="text-xs text-muted-foreground font-mono">{parsed.seller.code}</p>}
+          </div>
+        )}
+      </div>
+      {parsed.items.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Line Items</p>
+          </div>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider">SKU</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider">Description</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Qty</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Price</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parsed.items.map((item, i) => {
+                  const qty = parseFloat(item.qty) || 0;
+                  const price = parseFloat(item.price) || 0;
+                  return (
+                    <TableRow key={i}>
+                      <TableCell className="text-xs font-mono text-red-600">{item.sku || "-"}</TableCell>
+                      <TableCell className="text-xs max-w-[200px] truncate">{item.desc || "-"}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">{item.qty}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums text-muted-foreground">{formatCurrency(price)}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums font-semibold">{formatCurrency(qty * price)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="bg-muted/30 border-t-2">
+                  <TableCell colSpan={4} className="text-xs font-bold text-right uppercase tracking-wider">Total</TableCell>
+                  <TableCell className="text-sm text-right font-bold tabular-nums text-red-600">
+                    {formatCurrency(parsed.items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.price) || 0), 0))}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ParsedJSONView({ data }: { data: any }) {
+  if (!data || typeof data !== "object") return null;
+
+  const customer = data.customer || data.shipTo;
+  const shipTo = data.shipTo;
+  const billTo = data.billTo;
+  const items = data.items || [];
+  const invoices = data.invoices;
+
+  if (invoices && Array.isArray(invoices) && invoices.length > 0) {
+    return (
+      <div className="space-y-4">
+        {invoices.map((inv: any, idx: number) => {
+          const invoice = inv.invoice || {};
+          const order = inv.order || {};
+          const cust = inv.customer || {};
+          const lines = inv.lines || [];
+          return (
+            <div key={idx} className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {invoice.number && (
+                  <div className="rounded-lg border border-border/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Invoice #</p>
+                    <p className="text-sm font-medium font-mono mt-0.5">{invoice.number}</p>
+                  </div>
+                )}
+                {invoice.date && (
+                  <div className="rounded-lg border border-border/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Date</p>
+                    <p className="text-sm font-medium mt-0.5">{invoice.date}</p>
+                  </div>
+                )}
+                {inv.shipDate && (
+                  <div className="rounded-lg border border-border/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Ship Date</p>
+                    <p className="text-sm font-medium mt-0.5">{inv.shipDate}</p>
+                  </div>
+                )}
+              </div>
+              {cust.name && (
+                <div className="rounded-lg border border-border/50 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Store className="w-3.5 h-3.5 text-blue-500" />
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ship To</p>
+                  </div>
+                  <p className="text-sm font-medium">{cust.name}</p>
+                  {cust.address && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {[cust.address.address1, cust.address.city, cust.address.state, cust.address.zip].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
+              {inv.trackingNumbers?.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Truck className="w-3.5 h-3.5 text-muted-foreground" />
+                  {inv.trackingNumbers.map((t: string, ti: number) => (
+                    <Badge key={ti} variant="secondary" className="text-xs font-mono">{t}</Badge>
+                  ))}
+                </div>
+              )}
+              {lines.length > 0 && (
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider">SKU</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Qty</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Price</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lines.map((line: any, li: number) => (
+                        <TableRow key={li}>
+                          <TableCell className="text-xs font-mono text-red-600">{line.number || "-"}</TableCell>
+                          <TableCell className="text-xs text-right tabular-nums">{line.quantity || 0}</TableCell>
+                          <TableCell className="text-xs text-right tabular-nums text-muted-foreground">{formatCurrency(line.unitPrice)}</TableCell>
+                          <TableCell className="text-xs text-right tabular-nums font-semibold">{formatCurrency((line.quantity || 0) * (line.unitPrice || 0))}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {inv.total?.amount && (
+                <div className="flex justify-end">
+                  <div className="rounded-lg bg-muted/30 border px-4 py-2">
+                    <span className="text-xs text-muted-foreground mr-2">Total:</span>
+                    <span className="text-sm font-bold text-red-600">{formatCurrency(inv.total.amount)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {data.poNumber && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">PO Number</p>
+            <p className="text-sm font-medium font-mono mt-0.5">{data.poNumber}</p>
+          </div>
+        )}
+        {data.date && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Date</p>
+            <p className="text-sm font-medium mt-0.5">{data.date}</p>
+          </div>
+        )}
+        {data.status && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Status</p>
+            <p className="text-sm font-medium mt-0.5">{data.status}</p>
+          </div>
+        )}
+        {data.vendor && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Vendor</p>
+            <p className="text-sm font-medium mt-0.5">{data.vendor}</p>
+          </div>
+        )}
+        {data.totalItems && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Total Items</p>
+            <p className="text-sm font-medium mt-0.5">{data.totalItems}</p>
+          </div>
+        )}
+        {data.totalAmount && (
+          <div className="rounded-lg border border-border/50 p-2.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Total Amount</p>
+            <p className="text-sm font-medium mt-0.5 text-red-600">{formatCurrency(data.totalAmount)}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {customer?.name && (
+          <div className="rounded-lg border border-border/50 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Store className="w-3.5 h-3.5 text-blue-500" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Customer</p>
+            </div>
+            <p className="text-sm font-medium">{customer.name}</p>
+            {customer.id && <p className="text-xs text-muted-foreground font-mono">{customer.id}</p>}
+            {customer.street && (
+              <p className="text-xs text-muted-foreground">
+                {[customer.street?.trim(), customer.city, customer.state, customer.zip].filter(Boolean).join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+        {shipTo?.name && shipTo.name !== customer?.name && (
+          <div className="rounded-lg border border-border/50 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Truck className="w-3.5 h-3.5 text-emerald-500" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ship To</p>
+            </div>
+            <p className="text-sm font-medium">{shipTo.name}</p>
+            {shipTo.locationCode && <p className="text-xs text-muted-foreground font-mono">{shipTo.locationCode}</p>}
+            {shipTo.street && (
+              <p className="text-xs text-muted-foreground">
+                {[shipTo.street?.trim(), shipTo.city, shipTo.state, shipTo.zip].filter(Boolean).join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {items.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Line Items</p>
+          </div>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider">SKU</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider">Description</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Qty</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Price</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item: any, i: number) => {
+                  const sku = item.sku || item.number || item.itemCode || "-";
+                  const desc = item.itemDesc || item.description || "-";
+                  const qty = parseFloat(item.requestedQuantity || item.quantity || item.qty || "0");
+                  const price = parseFloat(item.price || item.unitPrice || "0");
+                  return (
+                    <TableRow key={i}>
+                      <TableCell className="text-xs font-mono text-red-600">{sku}</TableCell>
+                      <TableCell className="text-xs max-w-[200px] truncate">{desc}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">{qty}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums text-muted-foreground">{formatCurrency(price)}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums font-semibold">{formatCurrency(qty * price)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {data.totalAmount && (
+                  <TableRow className="bg-muted/30 border-t-2">
+                    <TableCell colSpan={4} className="text-xs font-bold text-right uppercase tracking-wider">Total</TableCell>
+                    <TableCell className="text-sm text-right font-bold tabular-nums text-red-600">{formatCurrency(data.totalAmount)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContentViewerDialog({ open, onClose, title, titleIcon, content, rawContent, accentColor }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  titleIcon: any;
+  content: string | null;
+  rawContent: string | null;
+  accentColor: "blue" | "emerald";
+}) {
+  const [showRaw, setShowRaw] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  const TitleIcon = titleIcon;
+
+  const prevContentRef = useState<string | null>(null);
+  if (open && content !== prevContentRef[0]) {
+    prevContentRef[0] = content;
+    if (showRaw) setShowRaw(false);
+    if (copied) setCopied(false);
+  }
+
+  if (!content && !rawContent) return null;
+
+  const effectiveRaw = rawContent || content || "";
+  const decoded = effectiveRaw.replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+  const parsed = safeParseJson(decoded);
+  const isEDI = !parsed && decoded.includes("~") && decoded.includes("*");
+
+  const colorMap = {
+    blue: { iconBg: "bg-blue-500/15", iconColor: "text-blue-600", titleColor: "text-blue-700 dark:text-blue-400" },
+    emerald: { iconBg: "bg-emerald-500/15", iconColor: "text-emerald-600", titleColor: "text-emerald-700 dark:text-emerald-400" },
+  };
+  const colors = colorMap[accentColor];
+
+  const handleCopy = () => {
+    const text = parsed ? JSON.stringify(parsed, null, 2) : decoded;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast({ title: "Copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col" data-testid="dialog-content-viewer">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <div className={`flex items-center justify-center w-7 h-7 rounded-lg ${colors.iconBg} shrink-0`}>
+              <TitleIcon className={`w-4 h-4 ${colors.iconColor}`} />
+            </div>
+            <span className={colors.titleColor}>{title}</span>
+          </DialogTitle>
+          <DialogDescription className="sr-only">{title} content details</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+          {!showRaw ? (
+            <div className="py-1">
+              {isEDI ? (
+                <ParsedEDIView raw={decoded} />
+              ) : parsed ? (
+                <ParsedJSONView data={parsed} />
+              ) : (
+                <pre className="text-xs font-mono bg-muted/30 rounded-lg p-4 overflow-auto max-h-96 whitespace-pre-wrap break-words">
+                  {decoded}
+                </pre>
+              )}
+            </div>
+          ) : (
+            <pre className="text-xs font-mono bg-muted/30 rounded-lg p-4 overflow-auto whitespace-pre-wrap break-words" data-testid="raw-content-view">
+              {parsed ? JSON.stringify(parsed, null, 2) : decoded}
+            </pre>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRaw(!showRaw)}
+            data-testid="button-toggle-raw"
+          >
+            {showRaw ? <LayoutList className="w-3.5 h-3.5 mr-1.5" /> : <Code className="w-3.5 h-3.5 mr-1.5" />}
+            {showRaw ? "Parsed View" : "Raw Data"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            data-testid="button-copy-content"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const STEP_COLORS = [
   { bg: "bg-red-500", ring: "ring-red-200 dark:ring-red-900", dot: "bg-red-100 dark:bg-red-950" },
   { bg: "bg-blue-500", ring: "ring-blue-200 dark:ring-blue-900", dot: "bg-blue-100 dark:bg-blue-950" },
@@ -281,7 +765,11 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
     enabled: !!orderId,
   });
 
-  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [dialogState, setDialogState] = useState<{
+    open: boolean;
+    type: "inbound" | "outbound";
+    content: string | null;
+  }>({ open: false, type: "inbound", content: null });
 
   if (isLoading) {
     return (
@@ -316,17 +804,13 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
 
       <div className="space-y-1">
         {history.map((entry, idx) => {
-          const isExpanded = expandedRow === entry.id;
           const initialCfg = entry.initialStatus ? getStatusConfig(entry.initialStatus) : null;
           const newCfg = entry.newStatus ? getStatusConfig(entry.newStatus) : null;
           const InitialIcon = initialCfg?.icon || AlertCircle;
           const NewIcon = newCfg?.icon || AlertCircle;
 
-          const inbound = safeParseJson(entry.inboundContent);
-          const outbound = safeParseJson(entry.outboundContent);
           const hasInbound = !!entry.inboundContent && entry.inboundContent !== "";
           const hasOutbound = !!entry.outboundContent && entry.outboundContent !== "";
-          const hasContent = hasInbound || hasOutbound;
 
           const colorSet = STEP_COLORS[idx % STEP_COLORS.length];
           const StepIcon = STEP_ICONS[idx % STEP_ICONS.length];
@@ -337,32 +821,22 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
                 <StepIcon className={`w-3.5 h-3.5 text-white ${colorSet.bg} rounded-full p-0.5`} />
               </div>
 
-              <div
-                className={`rounded-xl border border-border/40 bg-card p-3.5 transition-all ${hasContent ? "cursor-pointer" : ""}`}
-                onClick={() => hasContent && setExpandedRow(isExpanded ? null : entry.id)}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {entry.initialStatus && (
-                      <Badge variant="outline" className={`text-[10px] font-semibold ${initialCfg?.color}`}>
-                        <InitialIcon className="w-3 h-3 mr-1" />
-                        {initialCfg?.label || entry.initialStatus}
-                      </Badge>
-                    )}
-                    {entry.initialStatus && entry.newStatus && (
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
-                    )}
-                    {entry.newStatus && (
-                      <Badge variant="outline" className={`text-[10px] font-semibold ${newCfg?.color}`}>
-                        <NewIcon className="w-3 h-3 mr-1" />
-                        {newCfg?.label || entry.newStatus}
-                      </Badge>
-                    )}
-                  </div>
-                  {hasContent && (
-                    <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" data-testid={`button-expand-${idx}`}>
-                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </Button>
+              <div className="rounded-xl border border-border/40 bg-card p-3.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {entry.initialStatus && (
+                    <Badge variant="outline" className={`text-[10px] font-semibold ${initialCfg?.color}`}>
+                      <InitialIcon className="w-3 h-3 mr-1" />
+                      {initialCfg?.label || entry.initialStatus}
+                    </Badge>
+                  )}
+                  {entry.initialStatus && entry.newStatus && (
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                  )}
+                  {entry.newStatus && (
+                    <Badge variant="outline" className={`text-[10px] font-semibold ${newCfg?.color}`}>
+                      <NewIcon className="w-3 h-3 mr-1" />
+                      {newCfg?.label || entry.newStatus}
+                    </Badge>
                   )}
                 </div>
 
@@ -402,35 +876,31 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
                   </div>
                 )}
 
-                {isExpanded && hasContent && (
-                  <div className="mt-3 space-y-3 border-t border-border/30 pt-3">
+                {(hasInbound || hasOutbound) && (
+                  <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                     {hasInbound && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Inbox className="w-3 h-3 text-blue-500" />
-                          <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Inbound Content</p>
-                        </div>
-                        <pre
-                          className="text-[11px] bg-blue-500/5 dark:bg-blue-500/10 rounded-lg p-3 overflow-x-auto max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-blue-200/30 dark:border-blue-800/30"
-                          data-testid={`history-inbound-${idx}`}
-                        >
-                          {inbound ? JSON.stringify(inbound, null, 2) : entry.inboundContent}
-                        </pre>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px] gap-1.5"
+                        onClick={() => setDialogState({ open: true, type: "inbound", content: entry.inboundContent })}
+                        data-testid={`button-view-inbound-${idx}`}
+                      >
+                        <Inbox className="w-3 h-3 text-blue-500" />
+                        View Inbound
+                      </Button>
                     )}
                     {hasOutbound && (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <SendIcon className="w-3 h-3 text-emerald-500" />
-                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Outbound Content</p>
-                        </div>
-                        <pre
-                          className="text-[11px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-lg p-3 overflow-x-auto max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-mono border border-emerald-200/30 dark:border-emerald-800/30"
-                          data-testid={`history-outbound-${idx}`}
-                        >
-                          {outbound ? JSON.stringify(outbound, null, 2) : entry.outboundContent}
-                        </pre>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px] gap-1.5"
+                        onClick={() => setDialogState({ open: true, type: "outbound", content: entry.outboundContent })}
+                        data-testid={`button-view-outbound-${idx}`}
+                      >
+                        <SendIcon className="w-3 h-3 text-emerald-500" />
+                        View Outbound
+                      </Button>
                     )}
                   </div>
                 )}
@@ -439,6 +909,16 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
           );
         })}
       </div>
+
+      <ContentViewerDialog
+        open={dialogState.open}
+        onClose={() => setDialogState({ open: false, type: "inbound", content: null })}
+        title={dialogState.type === "inbound" ? "Inbound Content" : "Outbound Content"}
+        titleIcon={dialogState.type === "inbound" ? Inbox : SendIcon}
+        content={dialogState.content}
+        rawContent={dialogState.content}
+        accentColor={dialogState.type === "inbound" ? "blue" : "emerald"}
+      />
     </div>
   );
 }
