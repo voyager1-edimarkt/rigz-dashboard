@@ -81,8 +81,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import shipmentTruckImg from "@assets/image_1770956397882.png";
-import deliveryGuyImg from "@assets/image_1770956601437.png";
+import truckIcon from "@assets/image_1770956177786.png";
 import { ArrowLeft } from "lucide-react";
 
 interface OrderRow {
@@ -949,28 +948,18 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
 function OrderTimeline({ steps }: { steps: { label: string; date: string | null; completed: boolean; warning?: boolean }[] }) {
   return (
     <div className="flex items-center w-full overflow-x-auto" data-testid="order-timeline">
-      {steps.map((step, i) => {
-        const isShipment = step.label === "Shipment";
-        const isDelivery = step.label === "Delivery";
-        return (
-          <div key={i} className="flex items-center flex-1 min-w-0">
-            <div className="flex flex-col items-center gap-1">
-              {isShipment ? (
-                <img src={shipmentTruckImg} alt="Shipment" className={`w-24 h-24 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
-              ) : isDelivery ? (
-                <img src={deliveryGuyImg} alt="Delivery" className={`w-14 h-14 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
-              ) : (
-                <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
-              )}
-              <p className={`text-[10px] font-medium text-center ${step.completed ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
-              {step.date && <p className="text-[9px] text-muted-foreground">{step.date}</p>}
-            </div>
-            {i < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted-foreground/20'}`} />
-            )}
+      {steps.map((step, i) => (
+        <div key={i} className="flex items-center flex-1 min-w-0">
+          <div className="flex flex-col items-center gap-1">
+            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
+            <p className={`text-[10px] font-medium text-center ${step.completed ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
+            {step.date && <p className="text-[9px] text-muted-foreground">{step.date}</p>}
           </div>
-        );
-      })}
+          {i < steps.length - 1 && (
+            <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted-foreground/20'}`} />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1100,9 +1089,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
               <Button variant="ghost" size="icon" onClick={() => navigate("/orders")} data-testid="button-back-orders">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 shrink-0">
-                <ShoppingCart className="w-4.5 h-4.5 text-white" />
-              </div>
+              <img src={truckIcon} alt="" className="w-10 h-10 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg font-semibold" data-testid="text-detail-order-number">
                   Order #{order.orderNumber}
@@ -1884,9 +1871,7 @@ export default function Orders() {
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-500/15 shrink-0">
-                              <ShoppingCart className="w-3.5 h-3.5 text-red-600" />
-                            </div>
+                            <img src={truckIcon} alt="" className="w-7 h-7 shrink-0" />
                             <span className="text-sm font-medium font-mono" data-testid={`text-order-num-${row.id}`}>
                               {row.orderNumber}
                             </span>
