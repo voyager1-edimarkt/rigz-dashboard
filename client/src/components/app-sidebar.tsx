@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import rigzLogo from "@assets/image_1771021143162.png";
 import {
   Sidebar,
   SidebarContent,
@@ -68,7 +69,9 @@ export function AppSidebar({
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-2" />
+      <SidebarHeader className="p-3">
+        <img src={rigzLogo} alt="RIGZ" className="h-8 w-auto" data-testid="img-logo" />
+      </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
