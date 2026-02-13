@@ -959,8 +959,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
   const lineItemCount = allLineItems.length + poLines.length;
 
   const tabs: TabDef[] = [
-    { id: "order", label: "Order Info", icon: ClipboardList, color: "bg-red-500/15 text-red-700" },
-    ...(hasCustomer ? [{ id: "customer", label: "Customer", icon: User, color: "bg-violet-500/15 text-violet-700" }] : []),
+    { id: "order", label: "Overview", icon: ClipboardList, color: "bg-red-500/15 text-red-700" },
     ...(hasShipping ? [{ id: "shipping", label: "Shipping", icon: Truck, color: "bg-cyan-500/15 text-cyan-700" }] : []),
     ...(hasInvoice ? [{ id: "invoice", label: "Invoice", icon: Receipt, color: "bg-emerald-500/15 text-emerald-700" }] : []),
     ...(hasLineItems ? [{ id: "items", label: `Items (${lineItemCount})`, icon: Package, color: "bg-amber-500/15 text-amber-700" }] : []),
@@ -1076,37 +1075,31 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                       <p className="text-sm mt-1" data-testid="text-detail-status-msg">{order.statusMessage}</p>
                     </div>
                   )}
-                </div>
-              )}
-
-              {activeTab === "customer" && customerInfo && (
-                <div className="space-y-3" data-testid="tab-content-customer">
-                  <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-violet-500/5 border border-violet-200/50">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-violet-500/15">
-                      <User className="w-5 h-5 text-violet-600" />
-                    </div>
-                    <div>
-                      <p className="text-base font-bold">{customerInfo.name || customerInfo.companyName || "-"}</p>
-                      <p className="text-xs text-muted-foreground">Customer</p>
-                    </div>
-                  </div>
-                  {customerInfo.address && (
-                    <InfoCard
-                      icon={MapPin}
-                      label="Address"
-                      accent="bg-violet-500/10"
-                      value={[
-                        customerInfo.address?.address1,
-                        customerInfo.address?.address2,
-                        customerInfo.address?.city,
-                        customerInfo.address?.state,
-                        customerInfo.address?.zip,
-                        customerInfo.address?.country,
-                      ].filter(Boolean).join(", ")}
-                    />
+                  {customerInfo && (
+                    <>
+                      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pt-3">Customer</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                        <InfoCard icon={User} label="Name" value={customerInfo.name || customerInfo.companyName || "-"} accent="bg-violet-500/10" />
+                        {customerInfo.phone && <InfoCard icon={User} label="Phone" value={customerInfo.phone} accent="bg-violet-500/10" />}
+                        {customerInfo.email && <InfoCard icon={User} label="Email" value={customerInfo.email} accent="bg-violet-500/10" />}
+                        {customerInfo.address && (
+                          <InfoCard
+                            icon={MapPin}
+                            label="Address"
+                            accent="bg-violet-500/10"
+                            value={[
+                              customerInfo.address?.address1,
+                              customerInfo.address?.address2,
+                              customerInfo.address?.city,
+                              customerInfo.address?.state,
+                              customerInfo.address?.zip,
+                              customerInfo.address?.country,
+                            ].filter(Boolean).join(", ")}
+                          />
+                        )}
+                      </div>
+                    </>
                   )}
-                  {customerInfo.phone && <InfoCard icon={User} label="Phone" value={customerInfo.phone} accent="bg-violet-500/10" />}
-                  {customerInfo.email && <InfoCard icon={User} label="Email" value={customerInfo.email} accent="bg-violet-500/10" />}
                 </div>
               )}
 
