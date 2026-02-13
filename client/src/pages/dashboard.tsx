@@ -316,7 +316,7 @@ export default function Dashboard() {
             <Truck className="w-4 h-4 text-muted-foreground" />
             <CardTitle className="text-sm">Order Pipeline</CardTitle>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <Select value={pipelinePreset} onValueChange={setPipelinePreset}>
               <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-pipeline-date-range">
                 <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1" />
@@ -332,7 +332,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             {pipelinePreset === "custom" && (
-              <div className="flex items-center gap-1.5">
+              <>
                 <Input
                   type="date"
                   value={customDateFrom}
@@ -348,7 +348,7 @@ export default function Dashboard() {
                   className="w-[130px] h-8 text-xs"
                   data-testid="input-pipeline-date-to"
                 />
-              </div>
+              </>
             )}
             <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
           </div>
