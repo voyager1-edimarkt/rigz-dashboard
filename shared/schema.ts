@@ -373,6 +373,24 @@ export interface ErrorFilters {
   channelName?: string;
 }
 
+export interface SalesInsights {
+  totalUnits: number;
+  totalRevenue: number;
+  uniqueSkus: number;
+  totalOrders: number;
+  topProducts: {
+    sku: string;
+    name: string | null;
+    vendor: string | null;
+    totalQty: number;
+    totalRevenue: number;
+    orderCount: number;
+    basePrice: number | null;
+  }[];
+  recentDailyUnits: { day: string; units: number; orders: number }[];
+  topVendorsByRevenue: { vendor: string; revenue: number; units: number }[];
+}
+
 export type ConnectionStatus = z.infer<typeof connectionStatusSchema>;
 export type DatabaseInfo = z.infer<typeof databaseInfoSchema>;
 export type TableInfo = z.infer<typeof tableInfoSchema>;

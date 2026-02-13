@@ -33,6 +33,7 @@ import type {
   ErrorListResult,
   ErrorStats,
   ErrorFilters,
+  SalesInsights,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -543,6 +544,141 @@ export class MySQLStorage implements IStorage {
       [id]
     );
     return (rows as any[])[0] || null;
+  }
+
+  private salesCache: { data: SalesInsights; timestamp: number } | null = null;
+  private salesCachePromise: Promise<SalesInsights> | null = null;
+
+  async getSalesInsights(): Promise<SalesInsights> {
+    const CACHE_TTL = 5 * 60 * 1000;
+    if (this.salesCache && Date.now() - this.salesCache.timestamp < CACHE_TTL) {
+      return this.salesCache.data;
+    }
+    if (this.salesCachePromise) return this.salesCachePromise;
+
+    this.salesCachePromise = this._computeSalesInsights().then((data) => {
+      this.salesCache = { data, timestamp: Date.now() };
+      this.salesCachePromise = null;
+      return data;
+    }).catch((err) => {
+      this.salesCachePromise = null;
+      throw err;
+    });
+    return this.salesCachePromise;
+  }
+
+  private async _computeSalesInsights(): Promise<SalesInsights> {
+    const batchSize = 2000;
+    const skuAgg: Record<string, { qty: number; revenue: number; orders: Set<number> }> = {};
+    const dailyAgg: Record<string, { units: number; orders: Set<number> }> = {};
+    const vendorAgg: Record<string, { revenue: number; units: number }> = {};
+    let totalUnits = 0;
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const rows = await queryNoDb(
+        `SELECT id, vendor, orderDate, content FROM runtime.orders ORDER BY id LIMIT ${batchSize} OFFSET ${offset}`
+      ) as any[];
+
+      if (rows.length < batchSize) hasMore = false;
+      offset += batchSize;
+
+      for (const row of rows) {
+        let items: any[] = [];
+        try {
+          const content = typeof row.content === "string" ? JSON.parse(row.content) : row.content;
+          items = content?.items || [];
+        } catch { continue; }
+
+        let orderHasQty = false;
+        const orderDate = row.orderDate ? new Date(row.orderDate).toISOString().split("T")[0] : null;
+
+        for (const item of items) {
+          const qty = Number(item.acceptedQuantity || 0);
+          const price = Number(item.price || 0);
+          const sku = item.sku;
+          if (qty <= 0 || !sku) continue;
+
+          orderHasQty = true;
+          totalUnits += qty;
+          totalRevenue += qty * price;
+
+          if (!skuAgg[sku]) skuAgg[sku] = { qty: 0, revenue: 0, orders: new Set() };
+          skuAgg[sku].qty += qty;
+          skuAgg[sku].revenue += qty * price;
+          skuAgg[sku].orders.add(row.id);
+
+          if (row.vendor) {
+            if (!vendorAgg[row.vendor]) vendorAgg[row.vendor] = { revenue: 0, units: 0 };
+            vendorAgg[row.vendor].revenue += qty * price;
+            vendorAgg[row.vendor].units += qty;
+          }
+        }
+
+        if (orderHasQty) {
+          totalOrders++;
+          if (orderDate) {
+            if (!dailyAgg[orderDate]) dailyAgg[orderDate] = { units: 0, orders: new Set() };
+            dailyAgg[orderDate].units += items.reduce((s: number, i: any) => s + Math.max(0, Number(i.acceptedQuantity || 0)), 0);
+            dailyAgg[orderDate].orders.add(row.id);
+          }
+        }
+      }
+    }
+
+    const topSkus = Object.entries(skuAgg)
+      .filter(([sku]) => !sku.includes("-") && !sku.includes("Frt"))
+      .sort((a, b) => b[1].qty - a[1].qty)
+      .slice(0, 20)
+      .map(([sku]) => sku);
+
+    let productDetails: any[] = [];
+    if (topSkus.length > 0) {
+      const placeholders = topSkus.map(() => "?").join(",");
+      productDetails = await queryNoDb(
+        `SELECT sku, name, vendor, basePrice FROM runtime.products WHERE sku IN (${placeholders})`,
+        topSkus
+      ) as any[];
+    }
+    const productMap: Record<string, any> = {};
+    productDetails.forEach((p) => { productMap[p.sku] = p; });
+
+    const topProducts = topSkus.map((sku) => {
+      const agg = skuAgg[sku];
+      const prod = productMap[sku];
+      return {
+        sku,
+        name: prod?.name || null,
+        vendor: prod?.vendor || null,
+        totalQty: agg.qty,
+        totalRevenue: agg.revenue,
+        orderCount: agg.orders.size,
+        basePrice: prod?.basePrice != null ? Number(prod.basePrice) : null,
+      };
+    });
+
+    const recentDailyUnits = Object.entries(dailyAgg)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 30)
+      .map(([day, v]) => ({ day, units: v.units, orders: v.orders.size }));
+
+    const topVendorsByRevenue = Object.entries(vendorAgg)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 10)
+      .map(([vendor, v]) => ({ vendor, revenue: v.revenue, units: v.units }));
+
+    return {
+      totalUnits,
+      totalRevenue,
+      uniqueSkus: Object.keys(skuAgg).length,
+      totalOrders,
+      topProducts,
+      recentDailyUnits,
+      topVendorsByRevenue,
+    };
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {

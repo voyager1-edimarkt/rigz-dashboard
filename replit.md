@@ -45,6 +45,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/orders/:id/history` - Order history from order_data table (status changes, inbound/outbound content)
 - `GET /api/products?limit=&offset=&search=&status=&vendor=&location=&active=` - Paginated product list
 - `GET /api/products/stats` - Product statistics (total, active, synced, deleted, avg price, by vendor, by location)
+- `GET /api/sales/insights` - Sales insights (units sold, revenue, top products by SKU, daily trends, vendor breakdown) - cached 5min
 - `GET /api/errors?limit=&offset=&search=&type=&channelName=` - Paginated error list
 - `GET /api/errors/stats` - Error statistics (total, by type, by channel, by vendor)
 - `GET /api/errors/:id` - Error detail by internal ID
@@ -66,6 +67,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Product Sales Insights widgets to dashboard (units sold, revenue, unique SKUs, orders with sales stats cards; top selling products table by SKU; daily units sold bar chart) with server-side batch processing and 5-min cache
 - 2026-02-13: Added Errors page with stats cards (total, by type EDI/JSON/XML), search, type/channel filters, table with guide/destination/vendor columns, detail sheet with copyable message/response/detail content
 - 2026-02-13: Added Suppliers page with stats cards, searchable table, detail sheet with carrier/address validation settings
 - 2026-02-13: Added Vendors page with stats cards, search, status/state filters, table with contact info, detail sheet with company/address/contact sections

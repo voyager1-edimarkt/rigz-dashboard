@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList } from "lucide-react";
-import type { PurchaseOrderStats } from "@shared/schema";
+import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode } from "lucide-react";
+import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
 import { useState, useMemo } from "react";
 import {
   ComposableMap,
@@ -118,6 +118,10 @@ export default function Dashboard() {
     queryKey: ["/api/purchase-orders/stats"],
   });
 
+  const { data: salesInsights, isLoading: salesLoading } = useQuery<SalesInsights>({
+    queryKey: ["/api/sales/insights"],
+  });
+
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
   const [hoveredCA, setHoveredCA] = useState<{ abbr: string; cnt: number } | null>(null);
 
@@ -174,6 +178,17 @@ export default function Dashboard() {
       }));
   }, [poStats]);
 
+  const salesDailyData = useMemo(() => {
+    if (!salesInsights?.recentDailyUnits) return [];
+    return [...salesInsights.recentDailyUnits]
+      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
+      .map((d) => ({
+        date: new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        units: d.units,
+        orders: d.orders,
+      }));
+  }, [salesInsights]);
+
   return (
     <div className="h-full overflow-auto p-6" data-testid="page-dashboard">
       <div className="flex items-center gap-3 mb-6">
@@ -182,8 +197,190 @@ export default function Dashboard() {
         </div>
         <div>
           <h1 className="text-xl font-semibold" data-testid="text-dashboard-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Overview of your customer data</p>
+          <p className="text-sm text-muted-foreground">Sales insights, customer data, and order activity</p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <Card data-testid="card-total-units-sold">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-red-500/15">
+                <Package className="w-4 h-4 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Units Sold</p>
+                {salesLoading ? (
+                  <Skeleton className="h-6 w-20 mt-0.5" />
+                ) : (
+                  <p className="text-lg font-bold" data-testid="text-total-units">{salesInsights?.totalUnits.toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-total-revenue">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-emerald-500/15">
+                <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                {salesLoading ? (
+                  <Skeleton className="h-6 w-20 mt-0.5" />
+                ) : (
+                  <p className="text-lg font-bold" data-testid="text-total-revenue">
+                    ${salesInsights?.totalRevenue ? (salesInsights.totalRevenue >= 1000000 ? (salesInsights.totalRevenue / 1000000).toFixed(1) + "M" : salesInsights.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })) : "0"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-unique-skus">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-blue-500/15">
+                <Barcode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Unique SKUs Sold</p>
+                {salesLoading ? (
+                  <Skeleton className="h-6 w-16 mt-0.5" />
+                ) : (
+                  <p className="text-lg font-bold" data-testid="text-unique-skus">{salesInsights?.uniqueSkus.toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-orders-with-sales">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-amber-500/15">
+                <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Orders with Sales</p>
+                {salesLoading ? (
+                  <Skeleton className="h-6 w-16 mt-0.5" />
+                ) : (
+                  <p className="text-lg font-bold" data-testid="text-orders-with-sales">{salesInsights?.totalOrders.toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <Card data-testid="card-top-products">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">Top Selling Products</CardTitle>
+            </div>
+            <Badge variant="outline">By Quantity</Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            {salesLoading ? (
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
+                ))}
+              </div>
+            ) : salesInsights?.topProducts && salesInsights.topProducts.length > 0 ? (
+              <div className="max-h-[320px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-card z-10">
+                    <tr className="border-b text-left">
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs">SKU</th>
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs">Vendor</th>
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs text-right">Qty Sold</th>
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs text-right">Revenue</th>
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs text-right">Orders</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesInsights.topProducts.map((p) => (
+                      <tr key={p.sku} className="border-b last:border-0" data-testid={`row-product-${p.sku}`}>
+                        <td className="px-4 py-2">
+                          <span className="font-mono font-medium text-xs">{p.sku}</span>
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground text-xs">{p.vendor || "-"}</td>
+                        <td className="px-4 py-2 text-right font-medium">{p.totalQty.toLocaleString()}</td>
+                        <td className="px-4 py-2 text-right text-muted-foreground">
+                          ${p.totalRevenue >= 1000000 ? (p.totalRevenue / 1000000).toFixed(1) + "M" : p.totalRevenue >= 1000 ? (p.totalRevenue / 1000).toFixed(1) + "K" : p.totalRevenue.toFixed(0)}
+                        </td>
+                        <td className="px-4 py-2 text-right text-muted-foreground">{p.orderCount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px]">
+                <p className="text-sm text-muted-foreground">No sales data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-daily-units-chart">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">Units Sold by Day</CardTitle>
+            </div>
+            <Badge variant="outline">Last 30 days with sales</Badge>
+          </CardHeader>
+          <CardContent>
+            {salesLoading ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : salesDailyData.length > 0 ? (
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salesDailyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "hsl(var(--border))" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "hsl(var(--border))" }}
+                    />
+                    <Tooltip content={({ active, payload, label }: any) => {
+                      if (!active || !payload?.[0]) return null;
+                      return (
+                        <div className="bg-background border rounded-lg shadow-lg px-3 py-2">
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                          <p className="text-sm font-semibold">{payload[0].value.toLocaleString()} units</p>
+                          {payload[0].payload.orders && (
+                            <p className="text-xs text-muted-foreground">{payload[0].payload.orders} orders</p>
+                          )}
+                        </div>
+                      );
+                    }} />
+                    <Bar dataKey="units" fill="#dc2626" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[280px]">
+                <p className="text-sm text-muted-foreground">No daily data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

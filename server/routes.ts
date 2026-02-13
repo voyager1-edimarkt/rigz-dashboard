@@ -293,6 +293,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/sales/insights", async (_req, res) => {
+    try {
+      const insights = await storage.getSalesInsights();
+      res.json(insights);
+    } catch (err: any) {
+      log(`Error fetching sales insights: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/errors/stats", async (_req, res) => {
     try {
       const stats = await storage.getErrorStats();
