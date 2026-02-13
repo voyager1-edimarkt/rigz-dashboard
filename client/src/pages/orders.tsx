@@ -997,7 +997,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
         </div>
       ) : order ? (
         <div className="px-4 pb-6">
-          <div className="pb-4 border-b mb-5 bg-gradient-to-b from-red-500/5 to-transparent rounded-lg px-5 pt-5">
+          <div className="pb-4 border-b mb-5 px-5 pt-5">
             <div className="flex items-center gap-4 pb-3">
               <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20 shrink-0">
                 <ShoppingCart className="w-6 h-6 text-white" />
