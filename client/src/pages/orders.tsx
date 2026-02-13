@@ -1089,9 +1089,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
               <Button variant="ghost" size="icon" onClick={() => navigate("/orders")} data-testid="button-back-orders">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 shrink-0">
-                <ShoppingCart className="w-4.5 h-4.5 text-white" />
-              </div>
+              <img src={truckIcon} alt="" className="w-10 h-10 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg font-semibold" data-testid="text-detail-order-number">
                   Order #{order.orderNumber}
