@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, RefreshCw, ChevronDown } from "lucide-react";
+import { Database, Table2, Eye, Terminal, LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, RefreshCw, ChevronDown, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -171,6 +171,16 @@ export function AppSidebar({
               >
                 <Warehouse className="w-4 h-4" />
                 <span>Warehouses</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className={location === "/inventory" ? "bg-sidebar-accent" : ""}
+                onClick={() => setLocation("/inventory")}
+                data-testid="button-inventory"
+              >
+                <Boxes className="w-4 h-4" />
+                <span>Inventory</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

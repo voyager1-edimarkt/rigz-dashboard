@@ -16,6 +16,7 @@ import Errors from "@/pages/errors";
 import Suppliers from "@/pages/suppliers";
 import Vendors from "@/pages/vendors";
 import Warehouses from "@/pages/warehouses";
+import Inventory from "@/pages/inventory";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import NotFound from "@/pages/not-found";
@@ -84,6 +85,9 @@ function AppContent() {
               </Route>
               <Route path="/warehouses">
                 <Warehouses />
+              </Route>
+              <Route path="/inventory">
+                <Inventory />
               </Route>
               <Route path="/orders/:id">
                 {(params: { id: string }) => (

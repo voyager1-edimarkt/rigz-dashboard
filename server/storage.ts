@@ -34,6 +34,9 @@ import type {
   ErrorStats,
   ErrorFilters,
   SalesInsights,
+  InventoryListResult,
+  InventoryStats,
+  InventoryFilters,
   TableDataResult,
 } from "@shared/schema";
 
@@ -66,5 +69,7 @@ export interface IStorage {
   getErrorStats(): Promise<ErrorStats>;
   getErrorById(id: number): Promise<ErrorRow | null>;
   getSalesInsights(): Promise<SalesInsights>;
+  getInventory(filters: InventoryFilters): Promise<InventoryListResult>;
+  getInventoryStats(): Promise<InventoryStats>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

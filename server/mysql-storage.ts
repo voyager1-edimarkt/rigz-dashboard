@@ -34,6 +34,9 @@ import type {
   ErrorStats,
   ErrorFilters,
   SalesInsights,
+  InventoryListResult,
+  InventoryStats,
+  InventoryFilters,
   TableDataResult,
 } from "@shared/schema";
 import { query, queryNoDb, testConnection as testMysqlConnection } from "./mysql";
@@ -722,6 +725,83 @@ export class MySQLStorage implements IStorage {
       topProducts,
       recentDailyUnits,
       topVendorsByRevenue,
+    };
+  }
+
+  async getInventory(filters: InventoryFilters): Promise<InventoryListResult> {
+    const { limit, offset, search, warehouse, stockLevel } = filters;
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+
+    if (search) {
+      where += " AND (i.sku LIKE ? OR p.description LIKE ?)";
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (warehouse) {
+      where += " AND i.warehouse = ?";
+      params.push(warehouse);
+    }
+    if (stockLevel === "out") {
+      where += " AND i.available = 0";
+    } else if (stockLevel === "low") {
+      where += " AND i.available > 0 AND i.available <= 5";
+    } else if (stockLevel === "healthy") {
+      where += " AND i.available > 5";
+    }
+
+    const [countRows, rows] = await Promise.all([
+      queryNoDb(`SELECT COUNT(*) as total FROM runtime.inventory i LEFT JOIN runtime.products p ON i.sku = p.sku ${where}`, params) as Promise<any[]>,
+      queryNoDb(
+        `SELECT i.sku, i.warehouse, i.available, i.createdAt, i.updatedAt, COALESCE(p.name, p.description) AS productName, p.vendor, p.basePrice
+         FROM runtime.inventory i
+         LEFT JOIN runtime.products p ON i.sku = p.sku
+         ${where}
+         ORDER BY i.available ASC, i.sku ASC
+         LIMIT ? OFFSET ?`,
+        [...params, limit, offset]
+      ) as Promise<any[]>,
+    ]);
+
+    return {
+      rows: rows.map((r: any) => ({
+        sku: r.sku,
+        warehouse: r.warehouse,
+        available: Number(r.available),
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
+        productName: r.productName || null,
+        vendor: r.vendor || null,
+        basePrice: r.basePrice != null ? Number(r.basePrice) : null,
+      })),
+      total: countRows[0]?.total ?? 0,
+    };
+  }
+
+  async getInventoryStats(): Promise<InventoryStats> {
+    const [statsRows, warehouseRows] = await Promise.all([
+      queryNoDb(
+        `SELECT COUNT(DISTINCT sku) as totalSkus, SUM(available) as totalUnits,
+         COUNT(CASE WHEN available = 0 THEN 1 END) as outOfStockCount,
+         COUNT(CASE WHEN available > 0 AND available <= 5 THEN 1 END) as lowStockCount
+         FROM runtime.inventory`
+      ) as Promise<any[]>,
+      queryNoDb(
+        `SELECT warehouse, COUNT(DISTINCT sku) as skus, SUM(available) as units
+         FROM runtime.inventory GROUP BY warehouse ORDER BY units DESC`
+      ) as Promise<any[]>,
+    ]);
+
+    const s = statsRows[0] || {};
+    return {
+      totalSkus: Number(s.totalSkus) || 0,
+      totalUnits: Number(s.totalUnits) || 0,
+      lowStockCount: Number(s.lowStockCount) || 0,
+      outOfStockCount: Number(s.outOfStockCount) || 0,
+      byWarehouse: warehouseRows.map((r: any) => ({
+        warehouse: r.warehouse,
+        skus: Number(r.skus),
+        units: Number(r.units),
+      })),
     };
   }
 

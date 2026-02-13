@@ -366,6 +366,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/inventory", async (req, res) => {
+    try {
+      const result = await storage.getInventory({
+        limit: parseInt(req.query.limit as string) || 50,
+        offset: parseInt(req.query.offset as string) || 0,
+        search: (req.query.search as string) || undefined,
+        warehouse: (req.query.warehouse as string) || undefined,
+        stockLevel: (req.query.stockLevel as string) || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching inventory: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/inventory/stats", async (_req, res) => {
+    try {
+      const result = await storage.getInventoryStats();
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching inventory stats: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);

@@ -28,6 +28,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `client/src/pages/warehouses.tsx` - Warehouses management with card-based grid layout, detail sheet
 - `client/src/pages/errors.tsx` - Errors management with stats cards, search, type/channel filters, table, detail sheet with copyable JSON/EDI content
 - `client/src/pages/dashboard.tsx` - Dashboard with US/Canada maps showing customer distribution
+- `client/src/pages/inventory.tsx` - Inventory management with stats, warehouse chart, search/filters, detail sheet
 - `client/src/components/connection-badge.tsx` - Connection status indicator
 - `shared/schema.ts` - TypeScript types and Zod schemas
 
@@ -60,6 +61,8 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - `GET /api/purchase-orders/stats` - Purchase order statistics (total, by status, by vendor, recent by day)
 - `GET /api/purchase-orders/:id` - Purchase order detail with content and invoiceContent JSON
 - `GET /api/purchase-orders/:id/history` - Purchase order history from purchase_order_data table
+- `GET /api/inventory?limit=&offset=&search=&warehouse=&stockLevel=` - Paginated inventory list with product details
+- `GET /api/inventory/stats` - Inventory statistics (total SKUs, units, low/out of stock, by warehouse)
 - `POST /api/query` - Execute custom SQL
 
 ## Environment Variables
@@ -67,6 +70,7 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Inventory page with stats cards (SKUs, units, low/out of stock), warehouse breakdown chart, searchable/filterable table with product names from products table, detail sheet with stock value
 - 2026-02-13: Added Product Sales Insights widgets to dashboard (units sold, revenue, unique SKUs, orders with sales stats cards; top selling products table by SKU; daily units sold bar chart) with server-side batch processing and 5-min cache
 - 2026-02-13: Added Errors page with stats cards (total, by type EDI/JSON/XML), search, type/channel filters, table with guide/destination/vendor columns, detail sheet with copyable message/response/detail content
 - 2026-02-13: Added Suppliers page with stats cards, searchable table, detail sheet with carrier/address validation settings
