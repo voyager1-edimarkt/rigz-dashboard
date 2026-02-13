@@ -682,7 +682,7 @@ export class MySQLStorage implements IStorage {
     if (topSkus.length > 0) {
       const placeholders = topSkus.map(() => "?").join(",");
       productDetails = await queryNoDb(
-        `SELECT sku, name, vendor, basePrice FROM runtime.products WHERE sku IN (${placeholders})`,
+        `SELECT sku, COALESCE(name, description) AS name, vendor, basePrice FROM runtime.products WHERE sku IN (${placeholders})`,
         topSkus
       ) as any[];
     }

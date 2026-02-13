@@ -413,6 +413,7 @@ export default function Dashboard() {
                   <thead className="sticky top-0 bg-card z-10">
                     <tr className="border-b text-left">
                       <th className="px-4 py-2 font-medium text-muted-foreground text-xs">SKU</th>
+                      <th className="px-4 py-2 font-medium text-muted-foreground text-xs">Product</th>
                       <th className="px-4 py-2 font-medium text-muted-foreground text-xs">Vendor</th>
                       <th className="px-4 py-2 font-medium text-muted-foreground text-xs text-right">Qty Sold</th>
                       <th className="px-4 py-2 font-medium text-muted-foreground text-xs text-right">Revenue</th>
@@ -425,6 +426,7 @@ export default function Dashboard() {
                         <td className="px-4 py-2">
                           <span className="font-mono font-medium text-xs">{p.sku}</span>
                         </td>
+                        <td className="px-4 py-2 text-xs max-w-[200px] truncate">{p.name || "-"}</td>
                         <td className="px-4 py-2 text-muted-foreground text-xs">{p.vendor || "-"}</td>
                         <td className="px-4 py-2 text-right font-medium">{p.totalQty.toLocaleString()}</td>
                         <td className="px-4 py-2 text-right text-muted-foreground">
