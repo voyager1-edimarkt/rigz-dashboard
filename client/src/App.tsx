@@ -20,17 +20,8 @@ import Inventory from "@/pages/inventory";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import NotFound from "@/pages/not-found";
-import { useState } from "react";
 
 function AppContent() {
-  const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-
-  const handleSelectDatabase = (db: string) => {
-    setSelectedDatabase(db);
-    setSelectedTable(null);
-  };
-
   const style = {
     "--sidebar-width": "17rem",
     "--sidebar-width-icon": "3rem",
@@ -39,12 +30,7 @@ function AppContent() {
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar
-          selectedDatabase={selectedDatabase}
-          selectedTable={selectedTable}
-          onSelectDatabase={handleSelectDatabase}
-          onSelectTable={setSelectedTable}
-        />
+        <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
             <div className="flex items-center gap-2">
