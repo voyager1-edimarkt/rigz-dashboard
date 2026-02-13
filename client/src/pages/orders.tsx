@@ -158,6 +158,15 @@ function safeParseJson(str: string | null | undefined): any {
   }
 }
 
+function DetailRow({ label, value, testId }: { label: string; value: string | null | undefined; testId?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <p className="text-sm text-muted-foreground shrink-0">{label}</p>
+      <p className="text-sm font-medium text-right break-words min-w-0" data-testid={testId}>{value || "-"}</p>
+    </div>
+  );
+}
+
 function InfoCard({ icon: Icon, label, value, accent, testId }: { icon: any; label: string; value: string | null | undefined; accent?: string; testId?: string }) {
   const bg = accent || "bg-muted/60";
   const iconColor = accent ? accent.replace("bg-", "text-").replace("/10", "") : "text-muted-foreground";
@@ -1059,92 +1068,102 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                 <div className="space-y-6" data-testid="tab-content-order">
                   <div>
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Details</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <InfoCard icon={FileText} label="PO Number" value={content?.poNumber || order.orderNumber} accent="bg-red-500/10" testId="text-detail-order-num" />
-                      {content?.date && <InfoCard icon={Calendar} label="Date" value={formatDate(content.date)} accent="bg-red-500/10" />}
-                      {content?.status && <InfoCard icon={Zap} label="PO Status" value={content.status} accent="bg-amber-500/10" />}
-                      {content?.poType && <InfoCard icon={ClipboardList} label="PO Type" value={content.poType} accent="bg-amber-500/10" />}
-                      <InfoCard icon={Hash} label="CRM ID" value={order.crmId} accent="bg-indigo-500/10" testId="text-detail-crm-id" />
-                      <InfoCard icon={Package} label="Vendor" value={order.vendor} accent="bg-violet-500/10" testId="text-detail-vendor" />
-                      <InfoCard icon={MapPin} label="Country" value={order.country} accent="bg-cyan-500/10" testId="text-detail-country" />
-                      {content?.brand && <InfoCard icon={Tag} label="Brand" value={content.brand} accent="bg-amber-500/10" />}
-                      {content?.terms && <InfoCard icon={FileText} label="Terms" value={content.terms} accent="bg-amber-500/10" />}
-                      {content?.plannedDeliveryDate && <InfoCard icon={Calendar} label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} accent="bg-red-500/10" />}
-                      {content?.shipNotBefore && <InfoCard icon={Calendar} label="Ship Not Before" value={formatDate(content.shipNotBefore)} accent="bg-cyan-500/10" />}
-                      {content?.shipNotAfter && <InfoCard icon={Calendar} label="Ship Not After" value={formatDate(content.shipNotAfter)} accent="bg-cyan-500/10" />}
-                      {content?.shipmentDate && <InfoCard icon={Truck} label="Shipment Date" value={formatDate(content.shipmentDate)} accent="bg-cyan-500/10" />}
-                      {content?.shipAccountNumber && <InfoCard icon={Hash} label="Ship Account #" value={content.shipAccountNumber} accent="bg-cyan-500/10" />}
-                      {content?.vendorNumber && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorNumber} accent="bg-violet-500/10" />}
-                      {content?.paymentMode && <InfoCard icon={CreditCard} label="Payment Mode" value={content.paymentMode} accent="bg-emerald-500/10" />}
-                      {content?.allowanceOrCharge && <InfoCard icon={DollarSign} label="Allowance/Charge" value={content.allowanceOrCharge} accent="bg-emerald-500/10" />}
-                      {content?.grossAmount && <InfoCard icon={DollarSign} label="Gross Amount" value={content.grossAmount} accent="bg-emerald-500/10" />}
-                      {content?.totalItems && <InfoCard icon={Layers} label="Total Items" value={content.totalItems} accent="bg-indigo-500/10" />}
-                      {content?.totalAmount && <InfoCard icon={DollarSign} label="Total Amount" value={formatCurrency(content.totalAmount)} accent="bg-emerald-500/10" />}
-                      {content?.priceIdentifier?.name && <InfoCard icon={Tag} label="Price Identifier" value={content.priceIdentifier.name} accent="bg-amber-500/10" />}
-                      {content?.packingSlipUrl && <InfoCard icon={FileText} label="Packing Slip" value={content.packingSlipUrl} accent="bg-slate-500/10" />}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="rounded-md border bg-card p-5 space-y-4">
+                        <DetailRow label="PO Number" value={content?.poNumber || order.orderNumber} testId="text-detail-order-num" />
+                        <DetailRow label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
+                        <DetailRow label="Vendor" value={order.vendor} testId="text-detail-vendor" />
+                        <DetailRow label="Country" value={order.country} testId="text-detail-country" />
+                        {content?.status && <DetailRow label="PO Status" value={content.status} />}
+                        {content?.poType && <DetailRow label="PO Type" value={content.poType} />}
+                        {content?.brand && <DetailRow label="Brand" value={content.brand} />}
+                        {content?.terms && <DetailRow label="Terms" value={content.terms} />}
+                        {content?.vendorNumber && <DetailRow label="Vendor Number" value={content.vendorNumber} />}
+                        {content?.paymentMode && <DetailRow label="Payment Mode" value={content.paymentMode} />}
+                        {content?.priceIdentifier?.name && <DetailRow label="Price Identifier" value={content.priceIdentifier.name} />}
+                      </div>
+                      <div className="rounded-md border bg-card p-5 space-y-4">
+                        {content?.date && <DetailRow label="Order Date" value={formatDate(content.date)} />}
+                        <DetailRow label="Created" value={formatDate(order.createdAt)} />
+                        <DetailRow label="Updated" value={formatDate(order.updatedAt)} />
+                        {content?.plannedDeliveryDate && <DetailRow label="Planned Delivery" value={formatDate(content.plannedDeliveryDate)} />}
+                        {content?.shipNotBefore && <DetailRow label="Ship Not Before" value={formatDate(content.shipNotBefore)} />}
+                        {content?.shipNotAfter && <DetailRow label="Ship Not After" value={formatDate(content.shipNotAfter)} />}
+                        {content?.shipmentDate && <DetailRow label="Shipment Date" value={formatDate(content.shipmentDate)} />}
+                        {content?.shipAccountNumber && <DetailRow label="Ship Account #" value={content.shipAccountNumber} />}
+                        {content?.totalItems && <DetailRow label="Total Items" value={content.totalItems} />}
+                        {content?.totalAmount && <DetailRow label="Total Amount" value={formatCurrency(content.totalAmount)} />}
+                        {content?.grossAmount && <DetailRow label="Gross Amount" value={content.grossAmount} />}
+                        {content?.allowanceOrCharge && <DetailRow label="Allowance/Charge" value={content.allowanceOrCharge} />}
+                        {content?.packingSlipUrl && <DetailRow label="Packing Slip URL" value={content.packingSlipUrl} />}
+                      </div>
                     </div>
                   </div>
 
+                  {order.statusMessage && (
+                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Status Message</p>
+                      </div>
+                      <p className="text-sm mt-1" data-testid="text-detail-status-msg">{order.statusMessage}</p>
+                    </div>
+                  )}
+
                   {content && (
                     <>
+                      <div>
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Parties</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {content.customer && (
+                            <div className="rounded-md border bg-card p-5 space-y-4">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
+                              {content.customer.name && <DetailRow label="Name" value={content.customer.name} />}
+                              {content.customer.id && <DetailRow label="ID" value={content.customer.id} />}
+                              {content.customer.email && <DetailRow label="Email" value={content.customer.email} />}
+                              <DetailRow label="Address" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || "-"} />
+                            </div>
+                          )}
 
-                      {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Supplier</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {content.supplier.name && <InfoCard icon={Building2} label="Name" value={content.supplier.name} accent="bg-orange-500/10" />}
-                            {content.supplier.warehouseZip && <InfoCard icon={MapPin} label="Warehouse Zip" value={content.supplier.warehouseZip} accent="bg-orange-500/10" />}
-                            {content.supplier.phone && <InfoCard icon={Phone} label="Phone" value={content.supplier.phone} accent="bg-orange-500/10" />}
-                            {content.supplier.email && <InfoCard icon={Mail} label="Email" value={content.supplier.email} accent="bg-orange-500/10" />}
-                            {content.supplier.fax && <InfoCard icon={Phone} label="Fax" value={content.supplier.fax} accent="bg-orange-500/10" />}
-                          </div>
-                        </div>
-                      )}
+                          {content.shipTo && (content.shipTo.name || content.shipTo.street) && (
+                            <div className="rounded-md border bg-card p-5 space-y-4">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship To</p>
+                              {content.shipTo.name && <DetailRow label="Name" value={content.shipTo.name} />}
+                              {content.shipTo.locationCode && <DetailRow label="Location Code" value={content.shipTo.locationCode} />}
+                              {content.shipTo.email && <DetailRow label="Email" value={content.shipTo.email} />}
+                              <DetailRow label="Address" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || "-"} />
+                            </div>
+                          )}
 
-                      {content.customer && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Customer</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {content.customer.name && <InfoCard icon={User} label="Name" value={content.customer.name} accent="bg-violet-500/10" />}
-                            {content.customer.id && <InfoCard icon={Hash} label="Customer ID" value={content.customer.id} accent="bg-violet-500/10" />}
-                            {content.customer.email && <InfoCard icon={Mail} label="Email" value={content.customer.email} accent="bg-violet-500/10" />}
-                            <InfoCard icon={MapPin} label="Address" accent="bg-violet-500/10" value={[content.customer.street, content.customer.city, content.customer.state, content.customer.zip, content.customer.country].filter(Boolean).join(", ") || null} />
-                          </div>
-                        </div>
-                      )}
+                          {content.billTo && (content.billTo.name || content.billTo.street?.trim()) && (
+                            <div className="rounded-md border bg-card p-5 space-y-4">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bill To</p>
+                              {content.billTo.name && <DetailRow label="Name" value={content.billTo.name} />}
+                              {content.billTo.email && <DetailRow label="Email" value={content.billTo.email} />}
+                              <DetailRow label="Address" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || "-"} />
+                            </div>
+                          )}
 
-                      {content.shipTo && (content.shipTo.name || content.shipTo.street) && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Ship To</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {content.shipTo.name && <InfoCard icon={User} label="Name" value={content.shipTo.name} accent="bg-cyan-500/10" />}
-                            {content.shipTo.locationCode && <InfoCard icon={Hash} label="Location Code" value={content.shipTo.locationCode} accent="bg-cyan-500/10" />}
-                            {content.shipTo.email && <InfoCard icon={Mail} label="Email" value={content.shipTo.email} accent="bg-cyan-500/10" />}
-                            <InfoCard icon={MapPin} label="Address" accent="bg-cyan-500/10" value={[content.shipTo.street, content.shipTo.city, content.shipTo.state, content.shipTo.zip, content.shipTo.country].filter(Boolean).join(", ") || null} />
-                          </div>
-                        </div>
-                      )}
+                          {content.supplier && (content.supplier.name || content.supplier.phone || content.supplier.email) && (
+                            <div className="rounded-md border bg-card p-5 space-y-4">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</p>
+                              {content.supplier.name && <DetailRow label="Name" value={content.supplier.name} />}
+                              {content.supplier.warehouseZip && <DetailRow label="Warehouse Zip" value={content.supplier.warehouseZip} />}
+                              {content.supplier.phone && <DetailRow label="Phone" value={content.supplier.phone} />}
+                              {content.supplier.email && <DetailRow label="Email" value={content.supplier.email} />}
+                              {content.supplier.fax && <DetailRow label="Fax" value={content.supplier.fax} />}
+                            </div>
+                          )}
 
-                      {content.billTo && (content.billTo.name || content.billTo.street?.trim()) && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Bill To</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {content.billTo.name && <InfoCard icon={User} label="Name" value={content.billTo.name} accent="bg-indigo-500/10" />}
-                            {content.billTo.email && <InfoCard icon={Mail} label="Email" value={content.billTo.email} accent="bg-indigo-500/10" />}
-                            <InfoCard icon={MapPin} label="Address" accent="bg-indigo-500/10" value={[content.billTo.street, content.billTo.city, content.billTo.state, content.billTo.zip, content.billTo.country].filter(Boolean).join(", ") || null} />
-                          </div>
+                          {content.vendorInfo && (content.vendorInfo.name || content.vendorInfo.number) && (
+                            <div className="rounded-md border bg-card p-5 space-y-4">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vendor Info</p>
+                              {content.vendorInfo.name && <DetailRow label="Name" value={content.vendorInfo.name} />}
+                              {content.vendorInfo.number && <DetailRow label="Number" value={content.vendorInfo.number} />}
+                            </div>
+                          )}
                         </div>
-                      )}
-
-                      {content.vendorInfo && (content.vendorInfo.name || content.vendorInfo.number) && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Vendor Info</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {content.vendorInfo.name && <InfoCard icon={Store} label="Name" value={content.vendorInfo.name} accent="bg-slate-500/10" />}
-                            {content.vendorInfo.number && <InfoCard icon={Hash} label="Vendor Number" value={content.vendorInfo.number} accent="bg-slate-500/10" />}
-                          </div>
-                        </div>
-                      )}
+                      </div>
 
                       {content.items && content.items.length > 0 && (
                         <div>
@@ -1194,36 +1213,6 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                     </>
                   )}
 
-                  <div>
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Timeline</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="p-4 rounded-md border bg-card text-center">
-                        <Calendar className="w-5 h-5 mx-auto text-red-500 mb-2" />
-                        <p className="text-sm font-semibold">{formatDate(order.orderDate)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Order Date</p>
-                      </div>
-                      <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-created">
-                        <Calendar className="w-5 h-5 mx-auto text-emerald-500 mb-2" />
-                        <p className="text-sm font-semibold">{formatDate(order.createdAt)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Created</p>
-                      </div>
-                      <div className="p-4 rounded-md border bg-card text-center" data-testid="text-detail-updated">
-                        <Calendar className="w-5 h-5 mx-auto text-amber-500 mb-2" />
-                        <p className="text-sm font-semibold">{formatDate(order.updatedAt)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Updated</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {order.statusMessage && (
-                    <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-200/50">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Status Message</p>
-                      </div>
-                      <p className="text-sm mt-1" data-testid="text-detail-status-msg">{order.statusMessage}</p>
-                    </div>
-                  )}
                 </div>
               )}
 
