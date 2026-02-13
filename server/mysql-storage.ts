@@ -568,73 +568,57 @@ export class MySQLStorage implements IStorage {
   }
 
   private async _computeSalesInsights(): Promise<SalesInsights> {
-    const batchSize = 2000;
-    const skuAgg: Record<string, { qty: number; revenue: number; orders: Set<number> }> = {};
-    const dailyAgg: Record<string, { units: number; orders: Set<number> }> = {};
-    const vendorAgg: Record<string, { revenue: number; units: number }> = {};
-    let totalUnits = 0;
-    let totalRevenue = 0;
-    let totalOrders = 0;
-    let offset = 0;
-    let hasMore = true;
+    const [totalsRows, topSkuRows, dailyRows, vendorRows] = await Promise.all([
+      queryNoDb(
+        `SELECT SUM(jt.qty) as totalUnits, SUM(jt.qty * jt.price) as totalRevenue,
+                COUNT(DISTINCT jt.sku) as uniqueSkus, COUNT(DISTINCT o.id) as totalOrders
+         FROM runtime.orders o,
+         JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+           sku VARCHAR(100) PATH '$.sku',
+           qty DECIMAL(12,2) PATH '$.acceptedQuantity',
+           price DECIMAL(12,2) PATH '$.price'
+         )) jt
+         WHERE jt.qty > 0 AND jt.sku IS NOT NULL`
+      ) as any[],
+      queryNoDb(
+        `SELECT jt.sku, SUM(jt.qty) as totalQty, SUM(jt.qty * jt.price) as totalRevenue,
+                COUNT(DISTINCT o.id) as orderCount
+         FROM runtime.orders o,
+         JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+           sku VARCHAR(100) PATH '$.sku',
+           qty DECIMAL(12,2) PATH '$.acceptedQuantity',
+           price DECIMAL(12,2) PATH '$.price'
+         )) jt
+         WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+           AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
+         GROUP BY jt.sku ORDER BY totalQty DESC LIMIT 20`
+      ) as any[],
+      queryNoDb(
+        `SELECT DATE(o.orderDate) as day, SUM(jt.qty) as units, COUNT(DISTINCT o.id) as orders
+         FROM runtime.orders o,
+         JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+           sku VARCHAR(100) PATH '$.sku',
+           qty DECIMAL(12,2) PATH '$.acceptedQuantity'
+         )) jt
+         WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+         GROUP BY DATE(o.orderDate) ORDER BY day DESC LIMIT 30`
+      ) as any[],
+      queryNoDb(
+        `SELECT o.vendor, SUM(jt.qty * jt.price) as revenue, SUM(jt.qty) as units
+         FROM runtime.orders o,
+         JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+           sku VARCHAR(100) PATH '$.sku',
+           qty DECIMAL(12,2) PATH '$.acceptedQuantity',
+           price DECIMAL(12,2) PATH '$.price'
+         )) jt
+         WHERE jt.qty > 0 AND jt.sku IS NOT NULL AND o.vendor IS NOT NULL
+         GROUP BY o.vendor ORDER BY revenue DESC LIMIT 10`
+      ) as any[],
+    ]);
 
-    while (hasMore) {
-      const rows = await queryNoDb(
-        `SELECT id, vendor, orderDate, content FROM runtime.orders ORDER BY id LIMIT ${batchSize} OFFSET ${offset}`
-      ) as any[];
+    const totals = totalsRows[0] || {};
 
-      if (rows.length < batchSize) hasMore = false;
-      offset += batchSize;
-
-      for (const row of rows) {
-        let items: any[] = [];
-        try {
-          const content = typeof row.content === "string" ? JSON.parse(row.content) : row.content;
-          items = content?.items || [];
-        } catch { continue; }
-
-        let orderHasQty = false;
-        const orderDate = row.orderDate ? new Date(row.orderDate).toISOString().split("T")[0] : null;
-
-        for (const item of items) {
-          const qty = Number(item.acceptedQuantity || 0);
-          const price = Number(item.price || 0);
-          const sku = item.sku;
-          if (qty <= 0 || !sku) continue;
-
-          orderHasQty = true;
-          totalUnits += qty;
-          totalRevenue += qty * price;
-
-          if (!skuAgg[sku]) skuAgg[sku] = { qty: 0, revenue: 0, orders: new Set() };
-          skuAgg[sku].qty += qty;
-          skuAgg[sku].revenue += qty * price;
-          skuAgg[sku].orders.add(row.id);
-
-          if (row.vendor) {
-            if (!vendorAgg[row.vendor]) vendorAgg[row.vendor] = { revenue: 0, units: 0 };
-            vendorAgg[row.vendor].revenue += qty * price;
-            vendorAgg[row.vendor].units += qty;
-          }
-        }
-
-        if (orderHasQty) {
-          totalOrders++;
-          if (orderDate) {
-            if (!dailyAgg[orderDate]) dailyAgg[orderDate] = { units: 0, orders: new Set() };
-            dailyAgg[orderDate].units += items.reduce((s: number, i: any) => s + Math.max(0, Number(i.acceptedQuantity || 0)), 0);
-            dailyAgg[orderDate].orders.add(row.id);
-          }
-        }
-      }
-    }
-
-    const topSkus = Object.entries(skuAgg)
-      .filter(([sku]) => !sku.includes("-") && !sku.includes("Frt"))
-      .sort((a, b) => b[1].qty - a[1].qty)
-      .slice(0, 20)
-      .map(([sku]) => sku);
-
+    const topSkus = topSkuRows.map((r: any) => r.sku);
     let productDetails: any[] = [];
     if (topSkus.length > 0) {
       const placeholders = topSkus.map(() => "?").join(",");
@@ -646,35 +630,36 @@ export class MySQLStorage implements IStorage {
     const productMap: Record<string, any> = {};
     productDetails.forEach((p) => { productMap[p.sku] = p; });
 
-    const topProducts = topSkus.map((sku) => {
-      const agg = skuAgg[sku];
-      const prod = productMap[sku];
+    const topProducts = topSkuRows.map((r: any) => {
+      const prod = productMap[r.sku];
       return {
-        sku,
+        sku: r.sku,
         name: prod?.name || null,
         vendor: prod?.vendor || null,
-        totalQty: agg.qty,
-        totalRevenue: agg.revenue,
-        orderCount: agg.orders.size,
+        totalQty: Number(r.totalQty),
+        totalRevenue: Number(r.totalRevenue),
+        orderCount: Number(r.orderCount),
         basePrice: prod?.basePrice != null ? Number(prod.basePrice) : null,
       };
     });
 
-    const recentDailyUnits = Object.entries(dailyAgg)
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .slice(0, 30)
-      .map(([day, v]) => ({ day, units: v.units, orders: v.orders.size }));
+    const recentDailyUnits = dailyRows.map((r: any) => ({
+      day: r.day instanceof Date ? r.day.toISOString().split("T")[0] : String(r.day),
+      units: Number(r.units),
+      orders: Number(r.orders),
+    }));
 
-    const topVendorsByRevenue = Object.entries(vendorAgg)
-      .sort((a, b) => b[1].revenue - a[1].revenue)
-      .slice(0, 10)
-      .map(([vendor, v]) => ({ vendor, revenue: v.revenue, units: v.units }));
+    const topVendorsByRevenue = vendorRows.map((r: any) => ({
+      vendor: r.vendor,
+      revenue: Number(r.revenue),
+      units: Number(r.units),
+    }));
 
     return {
-      totalUnits,
-      totalRevenue,
-      uniqueSkus: Object.keys(skuAgg).length,
-      totalOrders,
+      totalUnits: Number(totals.totalUnits) || 0,
+      totalRevenue: Number(totals.totalRevenue) || 0,
+      uniqueSkus: Number(totals.uniqueSkus) || 0,
+      totalOrders: Number(totals.totalOrders) || 0,
       topProducts,
       recentDailyUnits,
       topVendorsByRevenue,
