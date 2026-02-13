@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle } from "lucide-react";
 import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -122,6 +122,10 @@ export default function Dashboard() {
 
   const { data: salesInsights, isLoading: salesLoading } = useQuery<SalesInsights>({
     queryKey: ["/api/sales/insights"],
+  });
+
+  const { data: errorStats, isLoading: errorStatsLoading } = useQuery<{ total: number; byType: { type: string; cnt: number }[] }>({
+    queryKey: ["/api/errors/stats"],
   });
 
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
@@ -278,6 +282,114 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mb-4" data-testid="card-order-pipeline">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <Truck className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Order Pipeline</CardTitle>
+          </div>
+          <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
+        </CardHeader>
+        <CardContent>
+          {orderStatsLoading || errorStatsLoading ? (
+            <Skeleton className="h-[100px] w-full" />
+          ) : (() => {
+            const statusMap: Record<string, number> = {};
+            orderStats?.byStatus?.forEach((s) => { statusMap[s.status] = s.cnt; });
+            const stages = [
+              {
+                label: "Received",
+                count: statusMap["PO_RECEIVED"] ?? 0,
+                icon: ShoppingCart,
+                color: "bg-blue-500/15",
+                iconColor: "text-blue-600 dark:text-blue-400",
+                barColor: "bg-blue-500",
+                path: "/orders",
+              },
+              {
+                label: "PO Sent",
+                count: statusMap["PO_SENT"] ?? 0,
+                icon: FileCheck,
+                color: "bg-amber-500/15",
+                iconColor: "text-amber-600 dark:text-amber-400",
+                barColor: "bg-amber-500",
+                path: "/purchase-orders",
+              },
+              {
+                label: "Fulfillment",
+                count: statusMap["FULFILLMENT_READY"] ?? 0,
+                icon: Package,
+                color: "bg-purple-500/15",
+                iconColor: "text-purple-600 dark:text-purple-400",
+                barColor: "bg-purple-500",
+                path: "/orders",
+              },
+              {
+                label: "Invoiced",
+                count: (statusMap["INVOICE_SENT"] ?? 0) + (statusMap["INVOICE_RECEIPT"] ?? 0),
+                icon: DollarSign,
+                color: "bg-emerald-500/15",
+                iconColor: "text-emerald-600 dark:text-emerald-400",
+                barColor: "bg-emerald-500",
+                path: "/orders",
+              },
+              {
+                label: "Cancelled",
+                count: statusMap["CANCELLED"] ?? 0,
+                icon: XCircle,
+                color: "bg-stone-500/15",
+                iconColor: "text-stone-500 dark:text-stone-400",
+                barColor: "bg-stone-400",
+                path: "/orders",
+              },
+              {
+                label: "Errors",
+                count: errorStats?.total ?? 0,
+                icon: AlertTriangle,
+                color: "bg-red-500/15",
+                iconColor: "text-red-600 dark:text-red-400",
+                barColor: "bg-red-500",
+                path: "/errors",
+              },
+            ];
+            const maxCount = Math.max(...stages.map((s) => s.count), 1);
+            return (
+              <div className="flex items-stretch gap-1 flex-wrap">
+                {stages.map((stage, i) => (
+                  <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[120px]">
+                    <div
+                      className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
+                      onClick={() => navigate(stage.path)}
+                      data-testid={`pipeline-stage-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-md ${stage.color}`}>
+                          <stage.icon className={`w-3.5 h-3.5 ${stage.iconColor}`} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground leading-tight">{stage.label}</p>
+                          <p className="text-sm font-bold leading-tight">{stage.count.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${stage.barColor} transition-all`}
+                          style={{ width: `${Math.max((stage.count / maxCount) * 100, 2)}%` }}
+                        />
+                      </div>
+                    </div>
+                    {i < stages.length - 1 && i !== 3 && (
+                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+                    )}
+                    {i === 3 && <div className="w-3.5 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Card data-testid="card-top-products">
