@@ -956,7 +956,7 @@ function OrderTimeline({ steps }: { steps: { label: string; date: string | null;
           <div key={i} className="flex items-center flex-1 min-w-0">
             <div className="flex flex-col items-center gap-1">
               {isShipment ? (
-                <img src={shipmentTruckImg} alt="Shipment" className={`w-24 h-24 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
+                <img src={shipmentTruckImg} alt="Shipment" className={`w-18 h-18 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
               ) : isDelivery ? (
                 <img src={deliveryGuyImg} alt="Delivery" className={`w-18 h-18 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
               ) : (
