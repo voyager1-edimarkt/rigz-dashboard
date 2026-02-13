@@ -1023,23 +1023,31 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
             </div>
           </div>
           <div className="border-b px-6">
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-6 flex-wrap">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
+                const countMatch = tab.label.match(/^(.+?)\s*\((\d+)\)$/);
+                const labelText = countMatch ? countMatch[1] : tab.label;
+                const countValue = countMatch ? countMatch[2] : null;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+                    className={`inline-flex items-center gap-1.5 px-1 py-3 text-[13px] font-medium transition-colors border-b-2 ${
                       isActive
                         ? "border-foreground text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                     data-testid={`tab-${tab.id}`}
                   >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
+                    <Icon className="w-3.5 h-3.5" />
+                    {labelText}
+                    {countValue && (
+                      <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                        {countValue}
+                      </span>
+                    )}
                   </button>
                 );
               })}
