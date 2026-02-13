@@ -172,13 +172,14 @@ export async function registerRoutes(
 
   app.get("/api/customers/stats", async (_req, res) => {
     try {
-      const [totalResult, statusResult, stateResult, countryResult, recentResult, parentResult] = await Promise.all([
+      const [totalResult, statusResult, stateResult, countryResult, recentResult, parentResult, caProvinceResult] = await Promise.all([
         queryNoDb("SELECT COUNT(*) as total FROM runtime.customers"),
         queryNoDb("SELECT status, COUNT(*) as cnt FROM runtime.customers GROUP BY status"),
-        queryNoDb("SELECT state, COUNT(*) as cnt FROM runtime.customers WHERE state IS NOT NULL AND state != '' GROUP BY state ORDER BY cnt DESC LIMIT 10"),
+        queryNoDb("SELECT state, COUNT(*) as cnt FROM runtime.customers WHERE state IS NOT NULL AND state != '' AND country = 'US' GROUP BY state ORDER BY cnt DESC LIMIT 10"),
         queryNoDb("SELECT country, COUNT(*) as cnt FROM runtime.customers WHERE country IS NOT NULL GROUP BY country ORDER BY cnt DESC"),
         queryNoDb("SELECT name, companyName, city, state, country, createdAt FROM runtime.customers ORDER BY createdAt DESC LIMIT 5"),
         queryNoDb("SELECT COUNT(DISTINCT parent) as cnt FROM runtime.customers WHERE parent IS NOT NULL"),
+        queryNoDb("SELECT state as province, COUNT(*) as cnt FROM runtime.customers WHERE country = 'CA' AND state IS NOT NULL AND state != '' GROUP BY state ORDER BY cnt DESC"),
       ]);
 
       res.json({
@@ -186,6 +187,7 @@ export async function registerRoutes(
         byStatus: statusResult,
         byState: stateResult,
         byCountry: countryResult,
+        byProvince: caProvinceResult,
         recent: recentResult,
         parentAccounts: Number((parentResult as any[])[0]?.cnt ?? 0),
       });

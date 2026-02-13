@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MapPin, Globe, LayoutDashboard } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
@@ -11,6 +12,7 @@ import {
 } from "react-simple-maps";
 
 const US_TOPO_URL = "/states-10m.json";
+const CA_GEO_URL = "/canada-provinces.json";
 
 const STATE_FIPS_TO_ABBR: Record<string, string> = {
   "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA",
@@ -26,23 +28,42 @@ const STATE_FIPS_TO_ABBR: Record<string, string> = {
   "56": "WY",
 };
 
+const PROVINCE_NAME_TO_ABBR: Record<string, string> = {
+  "Alberta": "AB", "British Columbia": "BC", "Manitoba": "MB",
+  "New Brunswick": "NB", "Newfoundland and Labrador": "NL",
+  "Northwest Territories": "NT", "Nova Scotia": "NS", "Nunavut": "NU",
+  "Ontario": "ON", "Prince Edward Island": "PE", "Quebec": "QC",
+  "Saskatchewan": "SK", "Yukon Territory": "YT",
+};
+
 interface CustomerStats {
   total: number;
   parentAccounts: number;
   byStatus: { status: string; cnt: number }[];
   byState: { state: string; cnt: number }[];
   byCountry: { country: string; cnt: number }[];
+  byProvince: { province: string; cnt: number }[];
 }
 
-function getColorForCount(count: number, max: number): string {
+type MapView = "US" | "CA";
+
+function getColorForCount(count: number, max: number, palette: "blue" | "emerald"): string {
   if (count === 0) return "#f1f5f9";
   const ratio = count / max;
-  if (ratio > 0.5) return "#1e40af";
-  if (ratio > 0.3) return "#2563eb";
-  if (ratio > 0.15) return "#3b82f6";
-  if (ratio > 0.05) return "#60a5fa";
-  if (ratio > 0.02) return "#93c5fd";
-  return "#bfdbfe";
+  if (palette === "blue") {
+    if (ratio > 0.5) return "#1e40af";
+    if (ratio > 0.3) return "#2563eb";
+    if (ratio > 0.15) return "#3b82f6";
+    if (ratio > 0.05) return "#60a5fa";
+    if (ratio > 0.02) return "#93c5fd";
+    return "#bfdbfe";
+  }
+  if (ratio > 0.5) return "#065f46";
+  if (ratio > 0.3) return "#047857";
+  if (ratio > 0.15) return "#059669";
+  if (ratio > 0.05) return "#34d399";
+  if (ratio > 0.02) return "#6ee7b7";
+  return "#a7f3d0";
 }
 
 export default function Dashboard() {
@@ -50,7 +71,8 @@ export default function Dashboard() {
     queryKey: ["/api/customers/stats"],
   });
 
-  const [hoveredState, setHoveredState] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<MapView>("US");
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [hoveredCount, setHoveredCount] = useState<number>(0);
 
   const stateMap = useMemo(() => {
@@ -59,12 +81,30 @@ export default function Dashboard() {
     return map;
   }, [stats]);
 
-  const maxCount = useMemo(() => {
+  const provinceMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    stats?.byProvince?.forEach((p) => { map[p.province] = p.cnt; });
+    return map;
+  }, [stats]);
+
+  const maxStateCount = useMemo(() => {
     return stats?.byState.length ? Math.max(...stats.byState.map((s) => s.cnt)) : 1;
+  }, [stats]);
+
+  const maxProvinceCount = useMemo(() => {
+    return stats?.byProvince?.length ? Math.max(...stats.byProvince.map((p) => p.cnt)) : 1;
   }, [stats]);
 
   const usCount = stats?.byCountry.find((c) => c.country === "US")?.cnt ?? 0;
   const caCount = stats?.byCountry.find((c) => c.country === "CA")?.cnt ?? 0;
+
+  const currentRegionData = mapView === "US" ? stats?.byState ?? [] : (stats?.byProvince ?? []).map(p => ({ state: p.province, cnt: p.cnt }));
+  const currentMax = mapView === "US" ? maxStateCount : maxProvinceCount;
+  const palette = mapView === "US" ? "blue" : "emerald";
+  const hoverColor = mapView === "US" ? "#1d4ed8" : "#047857";
+  const legendColors = mapView === "US"
+    ? ["#f1f5f9", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1e40af"]
+    : ["#f1f5f9", "#a7f3d0", "#6ee7b7", "#34d399", "#059669", "#047857", "#065f46"];
 
   return (
     <div className="h-full overflow-auto p-6" data-testid="page-dashboard">
@@ -85,16 +125,38 @@ export default function Dashboard() {
               <Globe className="w-4 h-4 text-muted-foreground" />
               <CardTitle className="text-sm">Customer Distribution</CardTitle>
             </div>
-            {hoveredState && (
-              <Badge variant="secondary" data-testid="badge-hovered-state">
-                {hoveredState}: {hoveredCount.toLocaleString()}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {hoveredRegion && (
+                <Badge variant="secondary" data-testid="badge-hovered-region">
+                  {hoveredRegion}: {hoveredCount.toLocaleString()}
+                </Badge>
+              )}
+              <div className="flex rounded-md border overflow-visible" data-testid="map-view-toggle">
+                <Button
+                  size="sm"
+                  variant={mapView === "US" ? "default" : "ghost"}
+                  className={`rounded-none rounded-l-md text-xs px-3 toggle-elevate ${mapView === "US" ? "toggle-elevated" : ""}`}
+                  onClick={() => setMapView("US")}
+                  data-testid="button-map-us"
+                >
+                  US
+                </Button>
+                <Button
+                  size="sm"
+                  variant={mapView === "CA" ? "default" : "ghost"}
+                  className={`rounded-none rounded-r-md text-xs px-3 toggle-elevate ${mapView === "CA" ? "toggle-elevated" : ""}`}
+                  onClick={() => setMapView("CA")}
+                  data-testid="button-map-ca"
+                >
+                  Canada
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pb-2">
             {statsLoading ? (
               <Skeleton className="w-full h-[340px]" />
-            ) : (
+            ) : mapView === "US" ? (
               <div className="relative">
                 <ComposableMap
                   projection="geoAlbersUsa"
@@ -105,27 +167,21 @@ export default function Dashboard() {
                   data-testid="map-us"
                 >
                   <Geographies geography={US_TOPO_URL}>
-                    {({ geographies }) =>
+                    {({ geographies }: { geographies: any[] }) =>
                       geographies.map((geo) => {
                         const fips = geo.id;
                         const abbr = STATE_FIPS_TO_ABBR[fips] ?? "";
                         const count = stateMap[abbr] ?? 0;
-                        const fill = getColorForCount(count, maxCount);
+                        const fill = getColorForCount(count, maxStateCount, "blue");
                         return (
                           <Geography
                             key={geo.rsmKey}
                             geography={geo}
-                            fill={hoveredState === abbr ? "#1d4ed8" : fill}
+                            fill={hoveredRegion === abbr ? hoverColor : fill}
                             stroke="#fff"
                             strokeWidth={0.5}
-                            onMouseEnter={() => {
-                              setHoveredState(abbr);
-                              setHoveredCount(count);
-                            }}
-                            onMouseLeave={() => {
-                              setHoveredState(null);
-                              setHoveredCount(0);
-                            }}
+                            onMouseEnter={() => { setHoveredRegion(abbr); setHoveredCount(count); }}
+                            onMouseLeave={() => { setHoveredRegion(null); setHoveredCount(0); }}
                             style={{
                               default: { outline: "none", cursor: "pointer" },
                               hover: { outline: "none", cursor: "pointer" },
@@ -138,18 +194,56 @@ export default function Dashboard() {
                     }
                   </Geographies>
                 </ComposableMap>
-
-                <div className="flex items-center gap-2 justify-center mt-2" data-testid="map-legend">
-                  <span className="text-xs text-muted-foreground">0</span>
-                  <div className="flex h-2 rounded-full overflow-hidden">
-                    {["#f1f5f9", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1e40af"].map((c) => (
-                      <div key={c} className="w-6 h-2" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                  <span className="text-xs text-muted-foreground">{maxCount.toLocaleString()}</span>
-                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <ComposableMap
+                  projection="geoMercator"
+                  projectionConfig={{ scale: 350, center: [-96, 62] }}
+                  width={800}
+                  height={450}
+                  style={{ width: "100%", height: "auto" }}
+                  data-testid="map-ca"
+                >
+                  <Geographies geography={CA_GEO_URL}>
+                    {({ geographies }: { geographies: any[] }) =>
+                      geographies.map((geo) => {
+                        const name = geo.properties?.name ?? "";
+                        const abbr = PROVINCE_NAME_TO_ABBR[name] ?? name;
+                        const count = provinceMap[abbr] ?? 0;
+                        const fill = getColorForCount(count, maxProvinceCount, "emerald");
+                        return (
+                          <Geography
+                            key={geo.rsmKey}
+                            geography={geo}
+                            fill={hoveredRegion === abbr ? hoverColor : fill}
+                            stroke="#fff"
+                            strokeWidth={0.5}
+                            onMouseEnter={() => { setHoveredRegion(abbr); setHoveredCount(count); }}
+                            onMouseLeave={() => { setHoveredRegion(null); setHoveredCount(0); }}
+                            style={{
+                              default: { outline: "none", cursor: "pointer" },
+                              hover: { outline: "none", cursor: "pointer" },
+                              pressed: { outline: "none" },
+                            }}
+                            data-testid={`map-province-${abbr}`}
+                          />
+                        );
+                      })
+                    }
+                  </Geographies>
+                </ComposableMap>
               </div>
             )}
+            <div className="flex items-center gap-2 justify-center mt-2" data-testid="map-legend">
+              <span className="text-xs text-muted-foreground">0</span>
+              <div className="flex h-2 rounded-full overflow-hidden">
+                {legendColors.map((c) => (
+                  <div key={c} className="w-6 h-2" style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">{currentMax.toLocaleString()}</span>
+            </div>
           </CardContent>
         </Card>
 
@@ -166,8 +260,12 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-blue-500/5 border border-blue-500/10" data-testid="stat-country-US">
-                    <div className="text-2xl">🇺🇸</div>
+                  <button
+                    className={`flex items-center gap-3 p-3 rounded-md w-full text-left transition-colors ${mapView === "US" ? "bg-blue-500/10 border border-blue-500/20" : "bg-muted/30 border border-transparent hover-elevate"}`}
+                    onClick={() => setMapView("US")}
+                    data-testid="stat-country-US"
+                  >
+                    <span className="text-2xl leading-none">&#x1F1FA;&#x1F1F8;</span>
                     <div className="flex-1">
                       <p className="text-sm font-medium">United States</p>
                       <p className="text-xs text-muted-foreground">
@@ -175,9 +273,13 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-lg font-bold text-blue-600">{usCount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-md bg-emerald-500/5 border border-emerald-500/10" data-testid="stat-country-CA">
-                    <div className="text-2xl">🇨🇦</div>
+                  </button>
+                  <button
+                    className={`flex items-center gap-3 p-3 rounded-md w-full text-left transition-colors ${mapView === "CA" ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-muted/30 border border-transparent hover-elevate"}`}
+                    onClick={() => setMapView("CA")}
+                    data-testid="stat-country-CA"
+                  >
+                    <span className="text-2xl leading-none">&#x1F1E8;&#x1F1E6;</span>
                     <div className="flex-1">
                       <p className="text-sm font-medium">Canada</p>
                       <p className="text-xs text-muted-foreground">
@@ -185,38 +287,42 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-lg font-bold text-emerald-600">{caCount.toLocaleString()}</span>
-                  </div>
+                  </button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card data-testid="card-top-states">
+          <Card data-testid="card-top-regions">
             <CardHeader className="flex flex-row items-center gap-2 pb-2">
               <MapPin className="w-4 h-4 text-muted-foreground" />
-              <CardTitle className="text-sm">Top States</CardTitle>
+              <CardTitle className="text-sm">{mapView === "US" ? "Top States" : "Top Provinces"}</CardTitle>
             </CardHeader>
             <CardContent className="pb-4">
               {statsLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-5 w-full" />)}
                 </div>
+              ) : currentRegionData.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No regional data available</p>
               ) : (
                 <div className="space-y-2">
-                  {stats?.byState.slice(0, 8).map((s) => {
-                    const pct = maxCount > 0 ? (s.cnt / maxCount) * 100 : 0;
+                  {currentRegionData.slice(0, 8).map((s) => {
+                    const pct = currentMax > 0 ? (s.cnt / currentMax) * 100 : 0;
+                    const barColor = mapView === "US" ? "bg-blue-500" : "bg-emerald-500";
+                    const highlightColor = mapView === "US" ? "text-blue-600" : "text-emerald-600";
                     return (
                       <div
                         key={s.state}
                         className="flex items-center gap-2"
-                        data-testid={`stat-state-${s.state}`}
-                        onMouseEnter={() => { setHoveredState(s.state); setHoveredCount(s.cnt); }}
-                        onMouseLeave={() => { setHoveredState(null); setHoveredCount(0); }}
+                        data-testid={`stat-region-${s.state}`}
+                        onMouseEnter={() => { setHoveredRegion(s.state); setHoveredCount(s.cnt); }}
+                        onMouseLeave={() => { setHoveredRegion(null); setHoveredCount(0); }}
                       >
-                        <span className={`text-xs w-8 font-mono ${hoveredState === s.state ? "text-blue-600 font-semibold" : "text-muted-foreground"}`}>{s.state}</span>
+                        <span className={`text-xs w-8 font-mono ${hoveredRegion === s.state ? `${highlightColor} font-semibold` : "text-muted-foreground"}`}>{s.state}</span>
                         <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-blue-500 transition-all"
+                            className={`h-full rounded-full ${barColor} transition-all`}
                             style={{ width: `${Math.max(pct, 2)}%` }}
                           />
                         </div>
