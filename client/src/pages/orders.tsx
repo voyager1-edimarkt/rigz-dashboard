@@ -21,12 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -973,8 +967,8 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
   ];
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg p-0" data-testid="sheet-order-detail">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0" data-testid="dialog-order-detail">
         {isLoading ? (
           <div className="p-8 space-y-5">
             <div className="flex items-center gap-4">
@@ -997,17 +991,17 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
           </div>
         ) : order ? (
           <>
-            <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent">
-              <SheetHeader className="pb-4">
+            <div className="px-6 pt-6 pb-4 border-b shrink-0 bg-gradient-to-b from-red-500/5 to-transparent rounded-t-lg">
+              <DialogHeader className="pb-4">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-500/20">
                     <ShoppingCart className="w-6 h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <SheetTitle className="text-xl font-bold" data-testid="text-detail-order-number">
+                    <DialogTitle className="text-xl font-bold" data-testid="text-detail-order-number">
                       Order #{order.orderNumber}
-                    </SheetTitle>
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {order.id}</p>
+                    </DialogTitle>
+                    <DialogDescription className="text-xs font-mono mt-0.5">ID: {order.id}</DialogDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-3 flex-wrap">
@@ -1030,11 +1024,11 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
                     {order.country}
                   </Badge>
                 </div>
-              </SheetHeader>
+              </DialogHeader>
               <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
             </div>
 
-            <div className="p-6 pt-5">
+            <div className="p-6 pt-5 flex-1 overflow-y-auto min-h-0">
               {activeTab === "order" && (
                 <div className="space-y-3" data-testid="tab-content-order">
                   <div className="grid grid-cols-2 gap-3">
@@ -1226,8 +1220,8 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
             <p className="text-sm text-muted-foreground">Order not found</p>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
