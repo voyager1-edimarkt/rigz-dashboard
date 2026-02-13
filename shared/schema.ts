@@ -437,6 +437,16 @@ export interface InventoryFilters {
   stockLevel?: string;
 }
 
+export interface StaleProduct {
+  sku: string;
+  name: string | null;
+  vendor: string | null;
+  previousQty: number;
+  previousOrders: number;
+  lastOrderDate: string;
+  basePrice: number | null;
+}
+
 export type ConnectionStatus = z.infer<typeof connectionStatusSchema>;
 export type DatabaseInfo = z.infer<typeof databaseInfoSchema>;
 export type TableInfo = z.infer<typeof tableInfoSchema>;

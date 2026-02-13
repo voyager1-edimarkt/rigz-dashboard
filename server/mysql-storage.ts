@@ -34,6 +34,7 @@ import type {
   ErrorStats,
   ErrorFilters,
   SalesInsights,
+  StaleProduct,
   InventoryListResult,
   InventoryStats,
   InventoryFilters,
@@ -825,6 +826,71 @@ export class MySQLStorage implements IStorage {
         units: Number(r.units),
       })),
     };
+  }
+
+  async getStaleProducts(recentDays: number = 30, previousDays: number = 60): Promise<StaleProduct[]> {
+    const previousSkusQuery = `
+      SELECT jt.sku, SUM(jt.qty) as totalQty, COUNT(DISTINCT o.id) as orderCount,
+             MAX(o.orderDate) as lastOrderDate
+      FROM runtime.orders o,
+      JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+        sku VARCHAR(100) PATH '$.sku',
+        qty DECIMAL(12,2) PATH '$.acceptedQuantity'
+      )) jt
+      WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+        AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
+        AND o.orderDate >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        AND o.orderDate < DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY jt.sku
+    `;
+
+    const recentSkusQuery = `
+      SELECT DISTINCT jt.sku
+      FROM runtime.orders o,
+      JSON_TABLE(o.content, '$.items[*]' COLUMNS(
+        sku VARCHAR(100) PATH '$.sku',
+        qty DECIMAL(12,2) PATH '$.acceptedQuantity'
+      )) jt
+      WHERE jt.qty > 0 AND jt.sku IS NOT NULL
+        AND jt.sku NOT LIKE '%-%' AND jt.sku NOT LIKE '%Frt%'
+        AND o.orderDate >= DATE_SUB(NOW(), INTERVAL ? DAY)
+    `;
+
+    const [previousRows, recentRows] = await Promise.all([
+      queryNoDb(previousSkusQuery, [previousDays, recentDays]) as Promise<any[]>,
+      queryNoDb(recentSkusQuery, [recentDays]) as Promise<any[]>,
+    ]);
+
+    const recentSkuSet = new Set(recentRows.map((r: any) => r.sku));
+    const staleRows = previousRows.filter((r: any) => !recentSkuSet.has(r.sku));
+
+    if (staleRows.length === 0) return [];
+
+    const skus = staleRows.map((r: any) => r.sku);
+    const placeholders = skus.map(() => "?").join(",");
+    const productDetails = await queryNoDb(
+      `SELECT sku, COALESCE(name, description) AS name, vendor, basePrice FROM runtime.products WHERE sku IN (${placeholders})`,
+      skus
+    ) as any[];
+
+    const productMap: Record<string, any> = {};
+    productDetails.forEach((p) => { productMap[p.sku] = p; });
+
+    return staleRows.map((r: any) => {
+      const prod = productMap[r.sku];
+      const lastDate = r.lastOrderDate instanceof Date
+        ? r.lastOrderDate.toISOString().split("T")[0]
+        : String(r.lastOrderDate ?? "");
+      return {
+        sku: r.sku,
+        name: prod?.name || null,
+        vendor: prod?.vendor || r.vendor || null,
+        previousQty: Number(r.totalQty),
+        previousOrders: Number(r.orderCount),
+        lastOrderDate: lastDate,
+        basePrice: prod?.basePrice != null ? Number(prod.basePrice) : null,
+      };
+    }).sort((a, b) => b.previousQty - a.previousQty);
   }
 
   async executeQuery(sql: string, database?: string): Promise<TableDataResult> {

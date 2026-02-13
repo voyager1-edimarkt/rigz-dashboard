@@ -70,6 +70,8 @@ A web-based MySQL database manager that connects to a remote MySQL server throug
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL config
 
 ## Recent Changes
+- 2026-02-13: Added Dropped Products dashboard section showing products ordered in previous period but not recently, with configurable lookback (15/30/45/60 days)
+- 2026-02-13: Added date range filter (presets + custom) to Order Pipeline on dashboard
 - 2026-02-13: Added Inventory page with stats cards (SKUs, units, low/out of stock), warehouse breakdown chart, searchable/filterable table with product names from products table, detail sheet with stock value
 - 2026-02-13: Added Product Sales Insights widgets to dashboard (units sold, revenue, unique SKUs, orders with sales stats cards; top selling products table by SKU; daily units sold bar chart) with server-side batch processing and 5-min cache
 - 2026-02-13: Added Errors page with stats cards (total, by type EDI/JSON/XML), search, type/channel filters, table with guide/destination/vendor columns, detail sheet with copyable message/response/detail content

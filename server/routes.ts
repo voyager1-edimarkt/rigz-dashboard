@@ -396,6 +396,22 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/stale-products", async (req, res) => {
+    try {
+      let recentDays = req.query.recentDays ? Number(req.query.recentDays) : 30;
+      let previousDays = req.query.previousDays ? Number(req.query.previousDays) : 60;
+      if (isNaN(recentDays) || recentDays < 1) recentDays = 30;
+      if (isNaN(previousDays) || previousDays < 1) previousDays = 60;
+      if (recentDays > 365) recentDays = 365;
+      if (previousDays > 365) previousDays = 365;
+      const result = await storage.getStaleProducts(recentDays, previousDays);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching stale products: ${err.message}`, "mysql");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/query", async (req, res) => {
     try {
       const parsed = queryRequestSchema.parse(req.body);

@@ -34,6 +34,7 @@ import type {
   ErrorStats,
   ErrorFilters,
   SalesInsights,
+  StaleProduct,
   InventoryListResult,
   InventoryStats,
   InventoryFilters,
@@ -71,5 +72,6 @@ export interface IStorage {
   getSalesInsights(): Promise<SalesInsights>;
   getInventory(filters: InventoryFilters): Promise<InventoryListResult>;
   getInventoryStats(): Promise<InventoryStats>;
+  getStaleProducts(recentDays?: number, previousDays?: number): Promise<StaleProduct[]>;
   executeQuery(sql: string, database?: string): Promise<TableDataResult>;
 }

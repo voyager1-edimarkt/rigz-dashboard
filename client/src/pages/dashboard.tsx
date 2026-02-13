@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar, TrendingDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { PurchaseOrderStats, SalesInsights } from "@shared/schema";
+import type { PurchaseOrderStats, SalesInsights, StaleProduct } from "@shared/schema";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -153,6 +154,14 @@ export default function Dashboard() {
 
   const { data: errorStats, isLoading: errorStatsLoading } = useQuery<{ total: number; byType: { type: string; cnt: number }[] }>({
     queryKey: [errorStatsUrl],
+  });
+
+  const [staleLookback, setStaleLookback] = useState("30");
+  const staleRecentDays = Number(staleLookback);
+  const stalePreviousDays = staleRecentDays * 2;
+  const staleUrl = `/api/stale-products?recentDays=${staleRecentDays}&previousDays=${stalePreviousDays}`;
+  const { data: staleProducts, isLoading: staleLoading } = useQuery<StaleProduct[]>({
+    queryKey: [staleUrl],
   });
 
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
@@ -450,6 +459,73 @@ export default function Dashboard() {
               </div>
             );
           })()}
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4" data-testid="card-stale-products">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Dropped Products</CardTitle>
+            <span className="text-xs text-muted-foreground">Ordered previously but not in the last period</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Select value={staleLookback} onValueChange={setStaleLookback}>
+              <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-stale-lookback">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">Last 15 Days</SelectItem>
+                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="45">Last 45 Days</SelectItem>
+                <SelectItem value="60">Last 60 Days</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline">{staleProducts?.length ?? "..."} products</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {staleLoading ? (
+            <div className="p-4 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : staleProducts && staleProducts.length > 0 ? (
+            <div className="max-h-[400px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">SKU</TableHead>
+                    <TableHead className="text-xs">Product</TableHead>
+                    <TableHead className="text-xs">Vendor</TableHead>
+                    <TableHead className="text-xs text-right">Prev. Units</TableHead>
+                    <TableHead className="text-xs text-right">Prev. Orders</TableHead>
+                    <TableHead className="text-xs">Last Ordered</TableHead>
+                    <TableHead className="text-xs text-right">Price</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staleProducts.map((p) => (
+                    <TableRow key={p.sku} data-testid={`row-stale-${p.sku}`}>
+                      <TableCell className="text-xs font-medium">{p.sku}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{p.name || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{p.vendor || "-"}</TableCell>
+                      <TableCell className="text-xs text-right font-medium">{p.previousQty.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-right">{p.previousOrders}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{p.lastOrderDate}</TableCell>
+                      <TableCell className="text-xs text-right">{p.basePrice != null ? `$${p.basePrice.toFixed(2)}` : "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[100px]">
+              <p className="text-sm text-muted-foreground">No dropped products found for this period</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
