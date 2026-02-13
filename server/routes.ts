@@ -156,7 +156,7 @@ export async function registerRoutes(
       const total = Number((countResult as any[])[0]?.total ?? 0);
 
       const rows = await queryNoDb(
-        `SELECT c.name, c.companyName, c.address, c.city, c.state, c.zip, c.country, c.email, c.phone, c.status, c.parent, c.priceLevel, c.createdAt, c.updatedAt
+        `SELECT c.name, c.companyName, c.address, c.city, c.state, c.zip, c.country, c.email, c.secondaryEmail, c.phone, c.officePhone, c.status, c.deleted, c.crmId, c.parent, c.priceLevel, c.createdAt, c.updatedAt
          FROM runtime.customers c ${where}
          ORDER BY c.companyName ASC
          LIMIT ${limit} OFFSET ${offset}`,

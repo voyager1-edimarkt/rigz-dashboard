@@ -68,8 +68,12 @@ interface CustomerRow {
   zip: string | null;
   country: string | null;
   email: string | null;
+  secondaryEmail: string | null;
   phone: string | null;
+  officePhone: string | null;
   status: string;
+  deleted: any;
+  crmId: string | null;
   parent: string | null;
   priceLevel: string | null;
   createdAt: string;
@@ -138,6 +142,7 @@ function CustomerDetailSheet({ customer, open, onClose }: { customer: CustomerRo
   const fullAddress = [customer.address, customer.city, customer.state, customer.zip, customer.country]
     .filter(Boolean)
     .join(", ");
+  const isDeleted = customer.deleted && (customer.deleted === 1 || (customer.deleted?.data && customer.deleted.data[0] === 1));
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -182,9 +187,28 @@ function CustomerDetailSheet({ customer, open, onClose }: { customer: CustomerRo
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Company Info</p>
           <DetailRow icon={Building2} label="Company Name" value={customer.companyName} testId="text-detail-company" />
           <DetailRow icon={Hash} label="Customer ID" value={customer.name} testId="text-detail-id" />
-          <DetailRow icon={Hash} label="CRM ID" value={customer.name} />
+          <DetailRow icon={Hash} label="CRM ID" value={customer.crmId} testId="text-detail-crm-id" />
           <DetailRow icon={Network} label="Parent Account" value={customer.parent} testId="text-detail-parent" />
           <DetailRow icon={Tag} label="Price Level" value={customer.priceLevel} testId="text-detail-price" />
+          <div className="flex items-start gap-3 py-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted shrink-0 mt-0.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Deleted</p>
+              <div className="mt-0.5">
+                {isDeleted ? (
+                  <Badge variant="outline" className="text-xs bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" data-testid="badge-detail-deleted">
+                    Yes
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs" data-testid="badge-detail-deleted">
+                    No
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <Separator />
@@ -209,7 +233,9 @@ function CustomerDetailSheet({ customer, open, onClose }: { customer: CustomerRo
         <div className="py-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Contact</p>
           <DetailRow icon={Mail} label="Email" value={customer.email} testId="text-detail-email" />
+          <DetailRow icon={Mail} label="Secondary Email" value={customer.secondaryEmail} testId="text-detail-secondary-email" />
           <DetailRow icon={Phone} label="Phone" value={customer.phone} testId="text-detail-phone" />
+          <DetailRow icon={PhoneCall} label="Office Phone" value={customer.officePhone} testId="text-detail-office-phone" />
         </div>
 
         <Separator />
