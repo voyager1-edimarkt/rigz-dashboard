@@ -3,6 +3,7 @@ import type { Server } from "http";
 import type { IStorage } from "./storage";
 import { queryRequestSchema } from "@shared/schema";
 import { log } from "./index";
+import { getOdooClient } from "./odoo";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -425,6 +426,125 @@ export async function registerRoutes(
         executionTime: 0,
         error: err.message,
       });
+    }
+  });
+
+  // ---- Odoo API Routes ----
+
+  app.get("/api/odoo/status", async (_req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const status = await odoo.testConnection();
+      res.json(status);
+    } catch (err: any) {
+      res.json({ connected: false, error: err.message });
+    }
+  });
+
+  app.get("/api/odoo/products", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const active = req.query.active as string;
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", "|",
+          ["name", "ilike", search],
+          ["default_code", "ilike", search],
+          ["description", "ilike", search]
+        );
+      }
+      if (active === "true") filters.push(["active", "=", true]);
+      else if (active === "false") filters.push(["active", "=", false]);
+
+      const result = await odoo.getProducts(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo products: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/sale-orders", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const state = (req.query.state as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", ["name", "ilike", search], ["partner_id", "ilike", search]);
+      }
+      if (state) filters.push(["state", "=", state]);
+      if (dateFrom) filters.push(["date_order", ">=", dateFrom]);
+      if (dateTo) filters.push(["date_order", "<=", dateTo]);
+
+      const result = await odoo.getSaleOrders(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo sale orders: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/purchase-orders", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const state = (req.query.state as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", ["name", "ilike", search], ["partner_id", "ilike", search]);
+      }
+      if (state) filters.push(["state", "=", state]);
+      if (dateFrom) filters.push(["date_order", ">=", dateFrom]);
+      if (dateTo) filters.push(["date_order", "<=", dateTo]);
+
+      const result = await odoo.getPurchaseOrders(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo purchase orders: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/partners", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const type = (req.query.type as string) || "";
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", "|",
+          ["name", "ilike", search],
+          ["email", "ilike", search],
+          ["phone", "ilike", search]
+        );
+      }
+      if (type === "customer") filters.push(["customer_rank", ">", 0]);
+      else if (type === "supplier") filters.push(["supplier_rank", ">", 0]);
+      else if (type === "company") filters.push(["is_company", "=", true]);
+
+      const result = await odoo.getPartners(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo partners: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
     }
   });
 

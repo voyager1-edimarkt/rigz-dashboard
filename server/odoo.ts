@@ -1,0 +1,258 @@
+import { log } from "./index";
+
+interface OdooConfig {
+  url: string;
+  db: string;
+  user: string;
+  password: string;
+}
+
+interface JsonRpcResponse {
+  jsonrpc: string;
+  id: number | string;
+  result?: any;
+  error?: {
+    code: number;
+    message: string;
+    data: {
+      message: string;
+      debug?: string;
+    };
+  };
+}
+
+export class OdooClient {
+  private config: OdooConfig;
+  private uid: number | null = null;
+
+  constructor() {
+    this.config = {
+      url: process.env.ODOO_URL || "https://rigz.odoo.com/jsonrpc",
+      db: process.env.ODOO_DB || "rigz",
+      user: process.env.ODOO_USER || "",
+      password: process.env.ODOO_PWD || "",
+    };
+  }
+
+  private async jsonRpc(payload: any): Promise<JsonRpcResponse> {
+    const response = await fetch(this.config.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json() as JsonRpcResponse;
+
+    if (data.error) {
+      throw new Error(
+        `Odoo error: ${data.error.data?.message || data.error.message}`
+      );
+    }
+
+    return data;
+  }
+
+  async authenticate(): Promise<number> {
+    if (this.uid !== null) {
+      return this.uid;
+    }
+
+    log(`Authenticating with Odoo at ${this.config.url} as ${this.config.user} on db ${this.config.db}...`, "odoo");
+
+    const resp = await this.jsonRpc({
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        service: "common",
+        method: "authenticate",
+        args: [this.config.db, this.config.user, this.config.password, {}],
+      },
+    });
+
+    if (resp.result === false || resp.result === null || resp.result === undefined) {
+      throw new Error("Odoo authentication failed - invalid credentials. Check ODOO_DB, ODOO_USER, ODOO_PWD values.");
+    }
+
+    this.uid = resp.result;
+    log(`Authenticated with Odoo as uid ${this.uid}`, "odoo");
+    return this.uid!;
+  }
+
+  async executeKw(
+    model: string,
+    method: string,
+    args: any[],
+    kwargs?: Record<string, any>
+  ): Promise<any> {
+    await this.authenticate();
+
+    const resp = await this.jsonRpc({
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.config.db,
+          this.uid,
+          this.config.password,
+          model,
+          method,
+          args,
+        ],
+        kwargs: kwargs || {},
+        id: Date.now(),
+      },
+    });
+
+    return resp.result;
+  }
+
+  async searchRead(
+    model: string,
+    filters: any[] = [],
+    fields: string[] = [],
+    offset?: number,
+    limit?: number,
+    order?: string
+  ): Promise<any[]> {
+    const kwargs: Record<string, any> = {};
+    if (fields.length > 0) kwargs.fields = fields;
+    if (offset !== undefined) kwargs.offset = offset;
+    if (limit !== undefined) kwargs.limit = limit;
+    if (order) kwargs.order = order;
+
+    return this.executeKw(model, "search_read", [filters], kwargs);
+  }
+
+  async searchCount(model: string, filters: any[] = []): Promise<number> {
+    return this.executeKw(model, "search_count", [filters]);
+  }
+
+  async read(model: string, ids: number[], fields: string[] = []): Promise<any[]> {
+    const kwargs: Record<string, any> = {};
+    if (fields.length > 0) kwargs.fields = fields;
+    return this.executeKw(model, "read", [ids], kwargs);
+  }
+
+  async create(model: string, values: Record<string, any>): Promise<number> {
+    return this.executeKw(model, "create", [values]);
+  }
+
+  async write(
+    model: string,
+    ids: number[],
+    values: Record<string, any>
+  ): Promise<boolean> {
+    return this.executeKw(model, "write", [ids, values]);
+  }
+
+  async testConnection(): Promise<{ connected: boolean; uid?: number; error?: string }> {
+    try {
+      const uid = await this.authenticate();
+      return { connected: true, uid };
+    } catch (err: any) {
+      return { connected: false, error: err.message };
+    }
+  }
+
+  reset(): void {
+    this.uid = null;
+  }
+
+  async getSaleOrders(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "date_order desc"
+  ): Promise<{ records: any[]; total: number }> {
+    const fields = [
+      "name", "partner_id", "partner_invoice_id", "partner_shipping_id",
+      "date_order", "state", "amount_total", "amount_untaxed",
+      "amount_tax", "order_line", "picking_ids", "invoice_ids",
+      "currency_id", "create_date", "write_date",
+    ];
+
+    const [records, total] = await Promise.all([
+      this.searchRead("sale.order", filters, fields, offset, limit, order),
+      this.searchCount("sale.order", filters),
+    ]);
+
+    return { records, total };
+  }
+
+  async getPurchaseOrders(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "date_order desc"
+  ): Promise<{ records: any[]; total: number }> {
+    const fields = [
+      "name", "partner_id", "date_order", "date_planned",
+      "state", "amount_total", "amount_untaxed", "amount_tax",
+      "order_line", "currency_id", "create_date", "write_date",
+    ];
+
+    const [records, total] = await Promise.all([
+      this.searchRead("purchase.order", filters, fields, offset, limit, order),
+      this.searchCount("purchase.order", filters),
+    ]);
+
+    return { records, total };
+  }
+
+  async getProducts(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "name asc"
+  ): Promise<{ records: any[]; total: number }> {
+    const fields = [
+      "name", "default_code", "description", "list_price",
+      "standard_price", "type", "categ_id", "active",
+      "qty_available", "virtual_available",
+      "create_date", "write_date",
+    ];
+
+    const [records, total] = await Promise.all([
+      this.searchRead("product.template", filters, fields, offset, limit, order),
+      this.searchCount("product.template", filters),
+    ]);
+
+    return { records, total };
+  }
+
+  async getPartners(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "name asc"
+  ): Promise<{ records: any[]; total: number }> {
+    const fields = [
+      "name", "email", "phone", "mobile", "street", "street2",
+      "city", "state_id", "zip", "country_id", "is_company",
+      "customer_rank", "supplier_rank", "active",
+      "create_date", "write_date",
+    ];
+
+    const [records, total] = await Promise.all([
+      this.searchRead("res.partner", filters, fields, offset, limit, order),
+      this.searchCount("res.partner", filters),
+    ]);
+
+    return { records, total };
+  }
+}
+
+let odooClient: OdooClient | null = null;
+
+export function getOdooClient(): OdooClient {
+  if (!odooClient) {
+    odooClient = new OdooClient();
+  }
+  return odooClient;
+}

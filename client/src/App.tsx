@@ -19,6 +19,10 @@ import Warehouses from "@/pages/warehouses";
 import Inventory from "@/pages/inventory";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
+import OdooProducts from "@/pages/odoo-products";
+import OdooOrders from "@/pages/odoo-orders";
+import OdooPurchaseOrders from "@/pages/odoo-purchase-orders";
+import OdooPartners from "@/pages/odoo-partners";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -41,6 +45,18 @@ function AppContent() {
             <Switch>
               <Route path="/">
                 <Dashboard />
+              </Route>
+              <Route path="/odoo/products">
+                <OdooProducts />
+              </Route>
+              <Route path="/odoo/sale-orders">
+                <OdooOrders />
+              </Route>
+              <Route path="/odoo/purchase-orders">
+                <OdooPurchaseOrders />
+              </Route>
+              <Route path="/odoo/partners">
+                <OdooPartners />
               </Route>
               <Route path="/customers">
                 <Customers />
