@@ -37,3 +37,14 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "3306"
+MYSQL_USER = "runtime"
+MYSQL_DATABASE = "data"
+SSH_HOST = "54.161.236.27"
+SSH_USER = "ec2-user"
+SSH_PORT = "22"
