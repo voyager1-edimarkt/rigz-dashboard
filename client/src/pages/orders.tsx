@@ -1080,23 +1080,22 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                       <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pt-3">Customer</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
                         <InfoCard icon={User} label="Name" value={customerInfo.name || customerInfo.companyName || "-"} accent="bg-violet-500/10" />
-                        {customerInfo.phone && <InfoCard icon={User} label="Phone" value={customerInfo.phone} accent="bg-violet-500/10" />}
-                        {customerInfo.email && <InfoCard icon={User} label="Email" value={customerInfo.email} accent="bg-violet-500/10" />}
-                        {customerInfo.address && (
-                          <InfoCard
-                            icon={MapPin}
-                            label="Address"
-                            accent="bg-violet-500/10"
-                            value={[
-                              customerInfo.address?.address1,
-                              customerInfo.address?.address2,
-                              customerInfo.address?.city,
-                              customerInfo.address?.state,
-                              customerInfo.address?.zip,
-                              customerInfo.address?.country,
-                            ].filter(Boolean).join(", ")}
-                          />
-                        )}
+                        {(customerInfo.id) && <InfoCard icon={Hash} label="Customer ID" value={customerInfo.id} accent="bg-violet-500/10" />}
+                        {(customerInfo.email) && <InfoCard icon={User} label="Email" value={customerInfo.email} accent="bg-violet-500/10" />}
+                        {(customerInfo.phone) && <InfoCard icon={User} label="Phone" value={customerInfo.phone} accent="bg-violet-500/10" />}
+                        <InfoCard
+                          icon={MapPin}
+                          label="Address"
+                          accent="bg-violet-500/10"
+                          value={[
+                            customerInfo.address?.address1 || customerInfo.address1 || customerInfo.street,
+                            customerInfo.address?.address2 || customerInfo.address2,
+                            customerInfo.address?.city || customerInfo.city,
+                            customerInfo.address?.state || customerInfo.state,
+                            customerInfo.address?.zip || customerInfo.zip,
+                            customerInfo.address?.country || customerInfo.country,
+                          ].filter(Boolean).join(", ") || null}
+                        />
                       </div>
                     </>
                   )}
@@ -1115,7 +1114,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                       </div>
                       <InfoCard icon={User} label="Name" value={shippingInfo.name} accent="bg-cyan-500/10" />
                       <InfoCard icon={MapPin} label="Address" accent="bg-cyan-500/10" value={
-                        [shippingInfo.address1, shippingInfo.address2, shippingInfo.city, shippingInfo.state, shippingInfo.zip, shippingInfo.country]
+                        [shippingInfo.address1 || shippingInfo.street, shippingInfo.address2, shippingInfo.city, shippingInfo.state, shippingInfo.zip, shippingInfo.country]
                           .filter(Boolean).join(", ")
                       } />
                     </div>
@@ -1131,7 +1130,7 @@ export function OrderDetailPage({ orderId }: { orderId: number }) {
                       </div>
                       <InfoCard icon={User} label="Name" value={billingInfo.name} accent="bg-indigo-500/10" />
                       <InfoCard icon={MapPin} label="Address" accent="bg-indigo-500/10" value={
-                        [billingInfo.address1, billingInfo.address2, billingInfo.city, billingInfo.state, billingInfo.zip, billingInfo.country]
+                        [billingInfo.address1 || billingInfo.street, billingInfo.address2, billingInfo.city, billingInfo.state, billingInfo.zip, billingInfo.country]
                           .filter(Boolean).join(", ")
                       } />
                     </div>
