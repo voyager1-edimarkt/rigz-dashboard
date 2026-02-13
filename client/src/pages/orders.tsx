@@ -81,6 +81,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import shipmentTruckImg from "@assets/image_1770956397882.png";
 import { ArrowLeft } from "lucide-react";
 
 interface OrderRow {
@@ -947,18 +948,25 @@ function OrderHistoryTimeline({ orderId }: { orderId: number }) {
 function OrderTimeline({ steps }: { steps: { label: string; date: string | null; completed: boolean; warning?: boolean }[] }) {
   return (
     <div className="flex items-center w-full overflow-x-auto" data-testid="order-timeline">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center flex-1 min-w-0">
-          <div className="flex flex-col items-center gap-1">
-            <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
-            <p className={`text-[10px] font-medium text-center ${step.completed ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
-            {step.date && <p className="text-[9px] text-muted-foreground">{step.date}</p>}
+      {steps.map((step, i) => {
+        const isShipment = step.label === "Shipment";
+        return (
+          <div key={i} className="flex items-center flex-1 min-w-0">
+            <div className="flex flex-col items-center gap-1">
+              {isShipment ? (
+                <img src={shipmentTruckImg} alt="Shipment" className={`w-6 h-6 ${step.completed ? 'opacity-100' : 'opacity-30 grayscale'}`} />
+              ) : (
+                <div className={`w-3 h-3 rounded-full ${step.completed ? 'bg-emerald-500' : step.warning ? 'bg-amber-500' : 'bg-muted-foreground/30'}`} />
+              )}
+              <p className={`text-[10px] font-medium text-center ${step.completed ? 'text-foreground' : 'text-muted-foreground'}`}>{step.label}</p>
+              {step.date && <p className="text-[9px] text-muted-foreground">{step.date}</p>}
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted-foreground/20'}`} />
+            )}
           </div>
-          {i < steps.length - 1 && (
-            <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted-foreground/20'}`} />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
