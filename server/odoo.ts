@@ -241,6 +241,48 @@ export class OdooClient {
     return { records, total };
   }
 
+  async getInvoices(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "invoice_date desc"
+  ): Promise<{ records: any[]; total: number }> {
+    const baseFilters: any[] = [["move_type", "=", "out_invoice"], ...filters];
+    const fields = [
+      "name", "partner_id", "invoice_date", "invoice_date_due",
+      "state", "payment_state", "amount_total", "amount_residual",
+      "amount_untaxed", "amount_tax", "currency_id",
+      "invoice_origin", "ref",
+      "create_date", "write_date",
+    ];
+
+    const records = await this.searchRead("account.move", baseFilters, fields, offset, limit, order);
+    const total = await this.searchCount("account.move", baseFilters);
+
+    return { records, total };
+  }
+
+  async getBills(
+    filters: any[] = [],
+    offset = 0,
+    limit = 25,
+    order = "invoice_date desc"
+  ): Promise<{ records: any[]; total: number }> {
+    const baseFilters: any[] = [["move_type", "=", "in_invoice"], ...filters];
+    const fields = [
+      "name", "partner_id", "invoice_date", "invoice_date_due",
+      "state", "payment_state", "amount_total", "amount_residual",
+      "amount_untaxed", "amount_tax", "currency_id",
+      "invoice_origin", "ref",
+      "create_date", "write_date",
+    ];
+
+    const records = await this.searchRead("account.move", baseFilters, fields, offset, limit, order);
+    const total = await this.searchCount("account.move", baseFilters);
+
+    return { records, total };
+  }
+
   async getPartners(
     filters: any[] = [],
     offset = 0,

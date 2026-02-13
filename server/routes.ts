@@ -520,6 +520,62 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/odoo/invoices", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const state = (req.query.state as string) || "";
+      const paymentState = (req.query.paymentState as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", "|", ["name", "ilike", search], ["partner_id.name", "ilike", search], ["invoice_origin", "ilike", search]);
+      }
+      if (state) filters.push(["state", "=", state]);
+      if (paymentState) filters.push(["payment_state", "=", paymentState]);
+      if (dateFrom) filters.push(["invoice_date", ">=", dateFrom]);
+      if (dateTo) filters.push(["invoice_date", "<=", dateTo]);
+
+      const result = await odoo.getInvoices(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo invoices: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/bills", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const search = (req.query.search as string) || "";
+      const state = (req.query.state as string) || "";
+      const paymentState = (req.query.paymentState as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const filters: any[] = [];
+      if (search) {
+        filters.push("|", "|", ["name", "ilike", search], ["partner_id.name", "ilike", search], ["invoice_origin", "ilike", search]);
+      }
+      if (state) filters.push(["state", "=", state]);
+      if (paymentState) filters.push(["payment_state", "=", paymentState]);
+      if (dateFrom) filters.push(["invoice_date", ">=", dateFrom]);
+      if (dateTo) filters.push(["invoice_date", "<=", dateTo]);
+
+      const result = await odoo.getBills(filters, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching Odoo bills: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/odoo/partners", async (req, res) => {
     try {
       const odoo = getOdooClient();

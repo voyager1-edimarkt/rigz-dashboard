@@ -22,7 +22,10 @@ import QueryRunner from "@/pages/query-runner";
 import OdooProducts from "@/pages/odoo-products";
 import OdooOrders from "@/pages/odoo-orders";
 import OdooPurchaseOrders from "@/pages/odoo-purchase-orders";
-import OdooPartners from "@/pages/odoo-partners";
+import OdooCustomers from "@/pages/odoo-customers";
+import OdooVendors from "@/pages/odoo-vendors";
+import OdooInvoices from "@/pages/odoo-invoices";
+import OdooBills from "@/pages/odoo-bills";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -46,17 +49,26 @@ function AppContent() {
               <Route path="/">
                 <Dashboard />
               </Route>
-              <Route path="/odoo/products">
-                <OdooProducts />
+              <Route path="/odoo/customers">
+                <OdooCustomers />
               </Route>
               <Route path="/odoo/sale-orders">
                 <OdooOrders />
               </Route>
+              <Route path="/odoo/invoices">
+                <OdooInvoices />
+              </Route>
+              <Route path="/odoo/vendors">
+                <OdooVendors />
+              </Route>
               <Route path="/odoo/purchase-orders">
                 <OdooPurchaseOrders />
               </Route>
-              <Route path="/odoo/partners">
-                <OdooPartners />
+              <Route path="/odoo/bills">
+                <OdooBills />
+              </Route>
+              <Route path="/odoo/products">
+                <OdooProducts />
               </Route>
               <Route path="/customers">
                 <Customers />

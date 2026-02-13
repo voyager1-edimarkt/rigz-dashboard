@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes, Globe } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes, FileText, Receipt } from "lucide-react";
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
@@ -42,20 +42,17 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>
-            <Globe className="w-3.5 h-3.5 mr-1" />
-            Odoo ERP
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>Sales Flow</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={location === "/odoo/products" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/products")}
-                  data-testid="button-odoo-products"
+                  className={location === "/odoo/customers" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/odoo/customers")}
+                  data-testid="button-odoo-customers"
                 >
-                  <Package className="w-4 h-4" />
-                  <span>Products</span>
+                  <Users className="w-4 h-4" />
+                  <span>Customers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -70,6 +67,34 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  className={location === "/odoo/invoices" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/odoo/invoices")}
+                  data-testid="button-odoo-invoices"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Invoices</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Purchase Flow</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className={location === "/odoo/vendors" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/odoo/vendors")}
+                  data-testid="button-odoo-vendors"
+                >
+                  <Truck className="w-4 h-4" />
+                  <span>Vendors</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
                   className={location === "/odoo/purchase-orders" ? "bg-sidebar-accent" : ""}
                   onClick={() => setLocation("/odoo/purchase-orders")}
                   data-testid="button-odoo-purchase-orders"
@@ -80,12 +105,30 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={location === "/odoo/partners" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/partners")}
-                  data-testid="button-odoo-partners"
+                  className={location === "/odoo/bills" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/odoo/bills")}
+                  data-testid="button-odoo-bills"
                 >
-                  <Users className="w-4 h-4" />
-                  <span>Partners</span>
+                  <Receipt className="w-4 h-4" />
+                  <span>Bills</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Products</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className={location === "/odoo/products" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/odoo/products")}
+                  data-testid="button-odoo-products"
+                >
+                  <Package className="w-4 h-4" />
+                  <span>Products</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
