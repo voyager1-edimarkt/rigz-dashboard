@@ -21,11 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ShoppingCart,
   Package,
@@ -183,7 +183,41 @@ function LineItemsTable({ items }: { items: any[] }) {
   );
 }
 
-function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
+interface TabDef {
+  id: string;
+  label: string;
+  icon: any;
+}
+
+function CapsuleTabs({ tabs, active, onChange }: { tabs: TabDef[]; active: string; onChange: (id: string) => void }) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap pb-1">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = active === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+            data-testid={`tab-${tab.id}`}
+          >
+            <Icon className="w-3 h-3" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderDetailModal({ orderId, open, onClose }: { orderId: number | null; open: boolean; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState("order");
+
   const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: [`/api/orders/${orderId}`],
     enabled: !!orderId && open,
@@ -213,69 +247,81 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
   const statusCfg = order ? getStatusConfig(order.status) : null;
   const StatusIcon = statusCfg?.icon || AlertCircle;
 
+  const hasCustomer = !!customerInfo;
+  const hasShipping = !!shippingInfo || !!billingInfo;
+  const hasInvoice = !!invoiceMeta;
+  const hasLineItems = contentLines.length > 0 || poLines.length > 0 || invoiceLines.length > 0;
+
+  const tabs: TabDef[] = [
+    { id: "order", label: "Order Info", icon: ClipboardList },
+    ...(hasCustomer ? [{ id: "customer", label: "Customer", icon: User }] : []),
+    ...(hasShipping ? [{ id: "shipping", label: "Shipping", icon: Truck }] : []),
+    ...(hasInvoice ? [{ id: "invoice", label: "Invoice", icon: Receipt }] : []),
+    ...(hasLineItems ? [{ id: "items", label: "Line Items", icon: Package }] : []),
+  ];
+
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg" data-testid="sheet-order-detail">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0" data-testid="modal-order-detail">
         {isLoading ? (
-          <div className="space-y-4 pt-6">
+          <div className="space-y-4 p-6">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-40 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
         ) : order ? (
           <>
-            <SheetHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-12 h-12 rounded-md bg-blue-500/15">
-                  <ShoppingCart className="w-5 h-5 text-blue-600" />
+            <div className="p-6 pb-4 border-b shrink-0">
+              <DialogHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-md bg-blue-500/15">
+                    <ShoppingCart className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="text-lg" data-testid="text-detail-order-number">
+                      Order #{order.orderNumber}
+                    </DialogTitle>
+                    <p className="text-xs text-muted-foreground font-mono">ID: {order.id}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-lg" data-testid="text-detail-order-number">
-                    Order #{order.orderNumber}
-                  </SheetTitle>
-                  <p className="text-xs text-muted-foreground font-mono">ID: {order.id}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-2 flex-wrap">
-                <Badge
-                  variant="outline"
-                  className={`text-xs ${statusCfg?.color}`}
-                  data-testid="badge-detail-status"
-                >
-                  <StatusIcon className="w-3 h-3 mr-1" />
-                  {statusCfg?.label}
-                </Badge>
-                {order.purchaseOrderNumber && (
-                  <Badge variant="outline" className="text-xs" data-testid="badge-detail-po">
-                    <FileText className="w-3 h-3 mr-1" />
-                    PO: {order.purchaseOrderNumber}
+                <div className="flex items-center gap-2 pt-2 flex-wrap">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${statusCfg?.color}`}
+                    data-testid="badge-detail-status"
+                  >
+                    <StatusIcon className="w-3 h-3 mr-1" />
+                    {statusCfg?.label}
                   </Badge>
-                )}
-              </div>
-            </SheetHeader>
-
-            <Separator />
-
-            <div className="py-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Order Info</p>
-              <DetailRow icon={Hash} label="Order Number" value={order.orderNumber} testId="text-detail-order-num" />
-              <DetailRow icon={Hash} label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
-              <DetailRow icon={Package} label="Vendor" value={order.vendor} testId="text-detail-vendor" />
-              <DetailRow icon={MapPin} label="Country" value={order.country} testId="text-detail-country" />
-              <DetailRow icon={Calendar} label="Order Date" value={formatDate(order.orderDate)} testId="text-detail-order-date" />
-              <DetailRow icon={Calendar} label="Created" value={formatDateTime(order.createdAt)} testId="text-detail-created" />
-              <DetailRow icon={Calendar} label="Updated" value={formatDateTime(order.updatedAt)} testId="text-detail-updated" />
-              {order.statusMessage && (
-                <DetailRow icon={AlertCircle} label="Status Message" value={order.statusMessage} testId="text-detail-status-msg" />
-              )}
+                  {order.purchaseOrderNumber && (
+                    <Badge variant="outline" className="text-xs" data-testid="badge-detail-po">
+                      <FileText className="w-3 h-3 mr-1" />
+                      PO: {order.purchaseOrderNumber}
+                    </Badge>
+                  )}
+                </div>
+              </DialogHeader>
+              <CapsuleTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
             </div>
 
-            {customerInfo && (
-              <>
-                <Separator />
-                <div className="py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Customer</p>
+            <div className="flex-1 overflow-y-auto p-6 pt-4">
+              {activeTab === "order" && (
+                <div data-testid="tab-content-order">
+                  <DetailRow icon={Hash} label="Order Number" value={order.orderNumber} testId="text-detail-order-num" />
+                  <DetailRow icon={Hash} label="CRM ID" value={order.crmId} testId="text-detail-crm-id" />
+                  <DetailRow icon={Package} label="Vendor" value={order.vendor} testId="text-detail-vendor" />
+                  <DetailRow icon={MapPin} label="Country" value={order.country} testId="text-detail-country" />
+                  <DetailRow icon={Calendar} label="Order Date" value={formatDate(order.orderDate)} testId="text-detail-order-date" />
+                  <DetailRow icon={Calendar} label="Created" value={formatDateTime(order.createdAt)} testId="text-detail-created" />
+                  <DetailRow icon={Calendar} label="Updated" value={formatDateTime(order.updatedAt)} testId="text-detail-updated" />
+                  {order.statusMessage && (
+                    <DetailRow icon={AlertCircle} label="Status Message" value={order.statusMessage} testId="text-detail-status-msg" />
+                  )}
+                </div>
+              )}
+
+              {activeTab === "customer" && customerInfo && (
+                <div data-testid="tab-content-customer">
                   <DetailRow icon={User} label="Name" value={customerInfo.name || customerInfo.companyName} />
                   {customerInfo.address && (
                     <DetailRow
@@ -291,43 +337,39 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
                       ].filter(Boolean).join(", ")}
                     />
                   )}
+                  {customerInfo.phone && <DetailRow icon={User} label="Phone" value={customerInfo.phone} />}
+                  {customerInfo.email && <DetailRow icon={User} label="Email" value={customerInfo.email} />}
                 </div>
-              </>
-            )}
+              )}
 
-            {shippingInfo && (
-              <>
-                <Separator />
-                <div className="py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Shipping</p>
-                  <DetailRow icon={User} label="Name" value={shippingInfo.name} />
-                  <DetailRow icon={MapPin} label="Address" value={
-                    [shippingInfo.address1, shippingInfo.address2, shippingInfo.city, shippingInfo.state, shippingInfo.zip, shippingInfo.country]
-                      .filter(Boolean).join(", ")
-                  } />
+              {activeTab === "shipping" && (
+                <div data-testid="tab-content-shipping">
+                  {shippingInfo && (
+                    <div className="pb-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Ship To</p>
+                      <DetailRow icon={User} label="Name" value={shippingInfo.name} />
+                      <DetailRow icon={MapPin} label="Address" value={
+                        [shippingInfo.address1, shippingInfo.address2, shippingInfo.city, shippingInfo.state, shippingInfo.zip, shippingInfo.country]
+                          .filter(Boolean).join(", ")
+                      } />
+                    </div>
+                  )}
+                  {billingInfo && (
+                    <div className="pt-2">
+                      {shippingInfo && <Separator className="mb-3" />}
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Bill To</p>
+                      <DetailRow icon={User} label="Name" value={billingInfo.name} />
+                      <DetailRow icon={MapPin} label="Address" value={
+                        [billingInfo.address1, billingInfo.address2, billingInfo.city, billingInfo.state, billingInfo.zip, billingInfo.country]
+                          .filter(Boolean).join(", ")
+                      } />
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
+              )}
 
-            {billingInfo && (
-              <>
-                <Separator />
-                <div className="py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Billing</p>
-                  <DetailRow icon={User} label="Name" value={billingInfo.name} />
-                  <DetailRow icon={MapPin} label="Address" value={
-                    [billingInfo.address1, billingInfo.address2, billingInfo.city, billingInfo.state, billingInfo.zip, billingInfo.country]
-                      .filter(Boolean).join(", ")
-                  } />
-                </div>
-              </>
-            )}
-
-            {invoiceMeta && (
-              <>
-                <Separator />
-                <div className="py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Invoice</p>
+              {activeTab === "invoice" && invoiceMeta && (
+                <div data-testid="tab-content-invoice">
                   <DetailRow icon={FileText} label="Invoice Number" value={invoiceMeta.number} />
                   <DetailRow icon={Calendar} label="Invoice Date" value={formatDate(invoiceMeta.date)} />
                   {invoiceTotal && (
@@ -339,43 +381,46 @@ function OrderDetailSheet({ orderId, open, onClose }: { orderId: number | null; 
                   {trackingNumbers.length > 0 && (
                     <DetailRow icon={Truck} label="Tracking" value={trackingNumbers.join(", ")} />
                   )}
+                  {invoiceData?.shipDate && (
+                    <DetailRow icon={Calendar} label="Ship Date" value={formatDate(invoiceData.shipDate)} />
+                  )}
+                  {invoiceData?.storeNumber && (
+                    <DetailRow icon={Building2} label="Store Number" value={invoiceData.storeNumber} />
+                  )}
                 </div>
-              </>
-            )}
+              )}
 
-            {(contentLines.length > 0 || poLines.length > 0 || invoiceLines.length > 0) && (
-              <>
-                <Separator />
-                <div className="py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-1 pt-2">Line Items</p>
-                  {invoiceLines.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground mb-1.5">Invoice Items ({invoiceLines.length})</p>
+              {activeTab === "items" && (
+                <div data-testid="tab-content-items">
+                  {invoiceLines.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Invoice Items ({invoiceLines.length})</p>
                       <LineItemsTable items={invoiceLines} />
                     </div>
-                  ) : contentLines.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground mb-1.5">Order Items ({contentLines.length})</p>
+                  )}
+                  {contentLines.length > 0 && invoiceLines.length === 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Order Items ({contentLines.length})</p>
                       <LineItemsTable items={contentLines} />
                     </div>
-                  ) : null}
+                  )}
                   {poLines.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs text-muted-foreground mb-1.5">PO Items ({poLines.length})</p>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">PO Items ({poLines.length})</p>
                       <LineItemsTable items={poLines} />
                     </div>
                   )}
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </>
         ) : (
           <div className="flex items-center justify-center h-40">
             <p className="text-sm text-muted-foreground">Order not found</p>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -645,7 +690,7 @@ export default function Orders() {
         </CardContent>
       </Card>
 
-      <OrderDetailSheet
+      <OrderDetailModal
         orderId={selectedOrderId}
         open={selectedOrderId !== null}
         onClose={() => setSelectedOrderId(null)}
