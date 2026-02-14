@@ -24,6 +24,7 @@ import OdooPurchaseOrders from "@/pages/odoo-purchase-orders";
 import OdooVendors from "@/pages/odoo-vendors";
 import OdooBills from "@/pages/odoo-bills";
 import SalesFlow from "@/pages/sales-flow";
+import OdooOrderDetail from "@/pages/odoo-order-detail";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -49,6 +50,11 @@ function AppContent() {
               </Route>
               <Route path="/sales-flow">
                 <SalesFlow />
+              </Route>
+              <Route path="/sales-flow/orders/:id">
+                {(params: { id: string }) => (
+                  <OdooOrderDetail orderId={Number(params.id)} />
+                )}
               </Route>
               <Route path="/odoo/vendors">
                 <OdooVendors />

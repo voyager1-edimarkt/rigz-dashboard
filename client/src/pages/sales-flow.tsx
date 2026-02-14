@@ -407,7 +407,7 @@ function OrdersAndInvoicesTab() {
                   return (
                     <TableRow key={o.id} data-testid={`row-order-${o.id}`}
                       className="cursor-pointer"
-                      onClick={() => navigate(`/orders/${o.id}`)}>
+                      onClick={() => navigate(`/sales-flow/orders/${o.id}`)}>
                       <TableCell className="font-medium">{o.name}</TableCell>
                       <TableCell>{Array.isArray(o.partner_id) ? o.partner_id[1] : "-"}</TableCell>
                       <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>

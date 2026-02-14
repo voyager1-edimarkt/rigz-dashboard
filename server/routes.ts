@@ -534,6 +534,8 @@ export async function registerRoutes(
         "date_order", "state", "amount_total", "amount_untaxed",
         "amount_tax", "order_line", "invoice_ids",
         "currency_id", "create_date", "write_date",
+        "note", "client_order_ref", "commitment_date",
+        "delivery_status", "invoice_status",
       ]);
 
       if (!orders || orders.length === 0) {
@@ -541,6 +543,19 @@ export async function registerRoutes(
       }
 
       const order = orders[0];
+
+      let orderLines: any[] = [];
+      if (order.order_line && order.order_line.length > 0) {
+        try {
+          orderLines = await odoo.read("sale.order.line", order.order_line, [
+            "name", "product_id", "product_uom_qty", "qty_delivered",
+            "qty_invoiced", "price_unit", "price_subtotal", "price_total",
+            "discount", "product_uom", "state",
+          ]);
+        } catch (e: any) {
+          log(`Warning: could not fetch order lines: ${e.message}`, "odoo");
+        }
+      }
 
       let invoices: any[] = [];
       if (order.invoice_ids && order.invoice_ids.length > 0) {
@@ -552,7 +567,20 @@ export async function registerRoutes(
         ]);
       }
 
-      res.json({ order, invoices });
+      let partner: any = null;
+      if (order.partner_id && Array.isArray(order.partner_id)) {
+        try {
+          const partners = await odoo.read("res.partner", [order.partner_id[0]], [
+            "name", "email", "phone", "mobile", "street", "street2",
+            "city", "state_id", "zip", "country_id", "vat",
+          ]);
+          if (partners.length > 0) partner = partners[0];
+        } catch (e: any) {
+          log(`Warning: could not fetch partner: ${e.message}`, "odoo");
+        }
+      }
+
+      res.json({ order, orderLines, invoices, partner });
     } catch (err: any) {
       log(`Error fetching sale order timeline: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });
