@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,12 +14,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
-} from "@/components/ui/sheet";
-import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Users, ShoppingCart, FileText, ArrowRight, X, Clock,
-  CircleCheck, CircleDot, Circle, CircleAlert, DollarSign, CalendarDays,
+  Users, ShoppingCart, FileText, ArrowRight,
 } from "lucide-react";
 
 interface OdooPartner {
@@ -305,7 +302,8 @@ interface SaleOrderWithInvoice extends OdooSaleOrder {
   invoices_summary: InvoiceSummary[];
 }
 
-function OrdersAndInvoicesTab({ onSelectOrder }: { onSelectOrder: (id: number) => void }) {
+function OrdersAndInvoicesTab() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [state, setState] = useState("all");
@@ -409,7 +407,7 @@ function OrdersAndInvoicesTab({ onSelectOrder }: { onSelectOrder: (id: number) =
                   return (
                     <TableRow key={o.id} data-testid={`row-order-${o.id}`}
                       className="cursor-pointer"
-                      onClick={() => onSelectOrder(o.id)}>
+                      onClick={() => navigate(`/orders/${o.id}`)}>
                       <TableCell className="font-medium">{o.name}</TableCell>
                       <TableCell>{Array.isArray(o.partner_id) ? o.partner_id[1] : "-"}</TableCell>
                       <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
@@ -458,183 +456,6 @@ function OrdersAndInvoicesTab({ onSelectOrder }: { onSelectOrder: (id: number) =
   );
 }
 
-function SaleOrderTimeline({ orderId, onClose }: { orderId: number | null; onClose: () => void }) {
-  const { data, isLoading, error } = useQuery<{ order: OdooSaleOrder & { invoice_ids: number[] }; invoices: OdooInvoice[] }>({
-    queryKey: ["/api/odoo/sale-orders", orderId, "timeline"],
-    queryFn: async () => {
-      const res = await fetch(`/api/odoo/sale-orders/${orderId}/timeline`);
-      if (!res.ok) throw new Error("Failed to fetch timeline");
-      return res.json();
-    },
-    enabled: orderId !== null,
-  });
-
-  const order = data?.order;
-  const invoices = data?.invoices || [];
-
-  const timelineEvents: { date: string; type: "order" | "invoice" | "payment"; title: string; description: string; status: string; statusVariant: "default" | "secondary" | "destructive" | "outline"; amount?: number; icon: typeof CircleDot }[] = [];
-
-  if (order) {
-    timelineEvents.push({
-      date: order.create_date,
-      type: "order",
-      title: `Sale Order Created`,
-      description: `${order.name} — ${Array.isArray(order.partner_id) ? order.partner_id[1] : "Unknown"}`,
-      status: orderStateLabels[order.state] || order.state,
-      statusVariant: orderStateVariants[order.state] || "outline",
-      amount: order.amount_total,
-      icon: order.state === "sale" || order.state === "done" ? CircleCheck : order.state === "cancel" ? CircleAlert : CircleDot,
-    });
-
-    if (order.state === "sale" && order.date_order !== order.create_date) {
-      timelineEvents.push({
-        date: order.date_order,
-        type: "order",
-        title: "Order Confirmed",
-        description: `Order confirmed as a sales order`,
-        status: "Confirmed",
-        statusVariant: "default",
-        icon: CircleCheck,
-      });
-    }
-  }
-
-  for (const inv of invoices) {
-    timelineEvents.push({
-      date: inv.create_date,
-      type: "invoice",
-      title: `Invoice Created`,
-      description: `${inv.name || "Draft"} — ${Array.isArray(inv.partner_id) ? inv.partner_id[1] : "Unknown"}`,
-      status: invoiceStateLabels[inv.state] || inv.state,
-      statusVariant: invoiceStateVariants[inv.state] || "outline",
-      amount: inv.amount_total,
-      icon: inv.state === "posted" ? CircleDot : inv.state === "cancel" ? CircleAlert : Circle,
-    });
-
-    if (inv.state === "posted" && inv.payment_state !== "not_paid") {
-      timelineEvents.push({
-        date: inv.write_date,
-        type: "payment",
-        title: `Payment ${paymentLabels[inv.payment_state] || inv.payment_state}`,
-        description: inv.payment_state === "paid"
-          ? `Full payment received — $${inv.amount_total.toFixed(2)}`
-          : `Outstanding: $${inv.amount_residual.toFixed(2)} of $${inv.amount_total.toFixed(2)}`,
-        status: paymentLabels[inv.payment_state] || inv.payment_state,
-        statusVariant: paymentVariants[inv.payment_state] || "outline",
-        amount: inv.payment_state === "paid" ? inv.amount_total : inv.amount_total - inv.amount_residual,
-        icon: inv.payment_state === "paid" ? CircleCheck : CircleDot,
-      });
-    }
-  }
-
-  timelineEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  return (
-    <Sheet open={orderId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto" data-testid="sheet-order-timeline">
-        <SheetHeader className="pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <SheetTitle className="flex items-center gap-2" data-testid="text-timeline-title">
-              <Clock className="w-5 h-5" />
-              {order ? `${order.name} Timeline` : "Loading..."}
-            </SheetTitle>
-            <SheetClose asChild>
-              <Button variant="ghost" size="icon" data-testid="button-close-timeline">
-                <X className="w-4 h-4" />
-              </Button>
-            </SheetClose>
-          </div>
-        </SheetHeader>
-
-        {isLoading ? (
-          <div className="space-y-4 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-destructive" data-testid="text-timeline-error">
-            Failed to load timeline data.
-          </div>
-        ) : (
-          <div className="space-y-6 px-1">
-            {order && (
-              <Card>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="font-semibold text-base" data-testid="text-order-name">{order.name}</span>
-                    <Badge variant={orderStateVariants[order.state] || "outline"} data-testid="badge-order-status">
-                      {orderStateLabels[order.state] || order.state}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground" data-testid="text-order-customer">
-                    {Array.isArray(order.partner_id) ? order.partner_id[1] : "-"}
-                  </div>
-                  <div className="flex items-center gap-4 flex-wrap text-sm">
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-                      {new Date(order.date_order).toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center gap-1 font-mono font-semibold">
-                      <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-                      {order.amount_total.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                    <span>{order.order_line?.length || 0} line items</span>
-                    <span>{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="relative pl-6">
-              <div className="absolute left-[11px] top-0 bottom-0 w-px bg-border" />
-
-              {timelineEvents.map((evt, idx) => {
-                const Icon = evt.icon;
-                return (
-                  <div key={idx} className="relative pb-6 last:pb-0" data-testid={`timeline-event-${idx}`}>
-                    <div className="absolute left-[-13px] top-1 w-6 h-6 rounded-full bg-background flex items-center justify-center">
-                      <Icon className={`w-5 h-5 ${
-                        evt.type === "payment" && evt.status === "Paid" ? "text-green-600 dark:text-green-400" :
-                        evt.type === "payment" ? "text-amber-500 dark:text-amber-400" :
-                        evt.type === "invoice" ? "text-blue-500 dark:text-blue-400" :
-                        "text-primary"
-                      }`} />
-                    </div>
-                    <div className="ml-5">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{evt.title}</span>
-                        <Badge variant={evt.statusVariant} className="text-xs">
-                          {evt.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">{evt.description}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                        <span>{new Date(evt.date).toLocaleString()}</span>
-                        {evt.amount !== undefined && (
-                          <span className="font-mono">${evt.amount.toFixed(2)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {timelineEvents.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-4">
-                  No timeline events found.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 const steps = [
   { id: "customers", label: "Customers", icon: Users },
   { id: "orders", label: "Orders & Invoices", icon: ShoppingCart },
@@ -644,7 +465,6 @@ type StepId = typeof steps[number]["id"];
 
 export default function SalesFlow() {
   const [activeTab, setActiveTab] = useState<StepId>("customers");
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
@@ -689,11 +509,10 @@ export default function SalesFlow() {
           <CustomersTab />
         </TabsContent>
         <TabsContent value="orders">
-          <OrdersAndInvoicesTab onSelectOrder={(id) => setSelectedOrderId(id)} />
+          <OrdersAndInvoicesTab />
         </TabsContent>
       </Tabs>
 
-      <SaleOrderTimeline orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
     </div>
   );
 }
