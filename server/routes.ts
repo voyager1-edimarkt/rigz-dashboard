@@ -731,7 +731,19 @@ export async function registerRoutes(
         }
       }
 
-      res.json({ bill, lines, partner });
+      let sourcePO: any = null;
+      if (bill.invoice_origin) {
+        try {
+          const poIds = await odoo.searchRead("purchase.order", [["name", "=", bill.invoice_origin]], ["id", "name"], 0, 1);
+          if (poIds && poIds.length > 0) {
+            sourcePO = { id: poIds[0].id, name: poIds[0].name };
+          }
+        } catch (e: any) {
+          log(`Warning: could not look up source PO: ${e.message}`, "odoo");
+        }
+      }
+
+      res.json({ bill, lines, partner, sourcePO });
     } catch (err: any) {
       log(`Error fetching Odoo bill detail: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });

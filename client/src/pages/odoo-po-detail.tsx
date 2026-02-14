@@ -264,8 +264,8 @@ export default function OdooPODetail({ poId }: { poId: number }) {
                     </TableHeader>
                     <TableBody>
                       {invoices.map((inv: any) => (
-                        <TableRow key={inv.id} data-testid={`row-bill-${inv.id}`}>
-                          <TableCell className="font-medium">{inv.name || "Draft"}</TableCell>
+                        <TableRow key={inv.id} data-testid={`row-bill-${inv.id}`} className="cursor-pointer" onClick={() => navigate(`/purchase-flow/bills/${inv.id}`)}>
+                          <TableCell className="font-medium text-primary underline-offset-2 hover:underline">{inv.name || "Draft"}</TableCell>
                           <TableCell className="text-sm">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : "-"}</TableCell>
                           <TableCell className="text-sm">{inv.invoice_date_due ? new Date(inv.invoice_date_due).toLocaleDateString() : "-"}</TableCell>
                           <TableCell>

@@ -33,6 +33,7 @@ interface BillDetailData {
   bill: any;
   lines: any[];
   partner: any;
+  sourcePO: { id: number; name: string } | null;
 }
 
 export default function OdooBillDetail({ billId }: { billId: number }) {
@@ -71,7 +72,7 @@ export default function OdooBillDetail({ billId }: { billId: number }) {
     );
   }
 
-  const { bill, lines, partner } = data;
+  const { bill, lines, partner, sourcePO } = data;
   const vendorName = Array.isArray(bill.partner_id) ? bill.partner_id[1] : "Unknown";
   const amountPaid = bill.amount_total - bill.amount_residual;
 
@@ -100,9 +101,16 @@ export default function OdooBillDetail({ billId }: { billId: number }) {
       </div>
 
       {bill.invoice_origin && (
-        <p className="text-sm text-muted-foreground" data-testid="text-source">
-          Source: {bill.invoice_origin}
-        </p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-source">
+          <span>Source:</span>
+          {sourcePO ? (
+            <Button variant="ghost" className="p-0 h-auto text-sm text-primary underline underline-offset-2" onClick={() => navigate(`/purchase-flow/orders/${sourcePO.id}`)} data-testid="link-source-po">
+              {sourcePO.name}
+            </Button>
+          ) : (
+            <span>{bill.invoice_origin}</span>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
