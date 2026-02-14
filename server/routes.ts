@@ -659,7 +659,22 @@ export async function registerRoutes(
             "invoice_origin", "ref", "create_date", "write_date",
           ]);
         } catch (e: any) {
-          log(`Warning: could not fetch PO invoices: ${e.message}`, "odoo");
+          log(`Warning: could not fetch PO invoices via invoice_ids: ${e.message}`, "odoo");
+        }
+      }
+      if (invoices.length === 0 && order.name) {
+        try {
+          invoices = await odoo.searchRead(
+            "account.move",
+            [["invoice_origin", "=", order.name], ["move_type", "=", "in_invoice"]],
+            ["name", "partner_id", "invoice_date", "invoice_date_due",
+              "state", "payment_state", "amount_total", "amount_residual",
+              "amount_untaxed", "amount_tax", "currency_id",
+              "invoice_origin", "ref", "create_date", "write_date"],
+            0, 50
+          );
+        } catch (e: any) {
+          log(`Warning: could not fetch PO bills by origin: ${e.message}`, "odoo");
         }
       }
 
