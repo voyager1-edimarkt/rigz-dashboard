@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes, FileText, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes } from "lucide-react";
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
@@ -85,22 +85,12 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={location === "/odoo/purchase-orders" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/purchase-orders")}
-                  data-testid="button-odoo-purchase-orders"
+                  className={location === "/purchase-flow" || location.startsWith("/purchase-flow/") ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/purchase-flow")}
+                  data-testid="button-purchase-flow"
                 >
                   <ClipboardList className="w-4 h-4" />
-                  <span>Purchase Orders</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/odoo/bills" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/odoo/bills")}
-                  data-testid="button-odoo-bills"
-                >
-                  <Receipt className="w-4 h-4" />
-                  <span>Bills</span>
+                  <span>POs & Bills</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

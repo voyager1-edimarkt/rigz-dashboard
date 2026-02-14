@@ -613,6 +613,131 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/odoo/purchase-orders/:id", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const poId = parseInt(req.params.id);
+      if (isNaN(poId)) {
+        return res.status(400).json({ message: "Invalid PO ID" });
+      }
+
+      const orders = await odoo.read("purchase.order", [poId], [
+        "name", "partner_id", "partner_ref",
+        "date_order", "date_planned", "date_approve",
+        "state", "amount_total", "amount_untaxed",
+        "amount_tax", "order_line", "invoice_ids",
+        "currency_id", "create_date", "write_date",
+        "notes", "origin", "receipt_status", "invoice_status",
+      ]);
+
+      if (!orders || orders.length === 0) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+
+      const order = orders[0];
+
+      let orderLines: any[] = [];
+      if (order.order_line && order.order_line.length > 0) {
+        try {
+          orderLines = await odoo.read("purchase.order.line", order.order_line, [
+            "name", "product_id", "product_qty", "qty_received",
+            "qty_invoiced", "price_unit", "price_subtotal", "price_total",
+            "product_uom", "state", "date_planned",
+          ]);
+        } catch (e: any) {
+          log(`Warning: could not fetch PO lines: ${e.message}`, "odoo");
+        }
+      }
+
+      let invoices: any[] = [];
+      if (order.invoice_ids && order.invoice_ids.length > 0) {
+        try {
+          invoices = await odoo.read("account.move", order.invoice_ids, [
+            "name", "partner_id", "invoice_date", "invoice_date_due",
+            "state", "payment_state", "amount_total", "amount_residual",
+            "amount_untaxed", "amount_tax", "currency_id",
+            "invoice_origin", "ref", "create_date", "write_date",
+          ]);
+        } catch (e: any) {
+          log(`Warning: could not fetch PO invoices: ${e.message}`, "odoo");
+        }
+      }
+
+      let partner: any = null;
+      if (order.partner_id && Array.isArray(order.partner_id)) {
+        try {
+          const partners = await odoo.read("res.partner", [order.partner_id[0]], [
+            "name", "email", "phone", "mobile", "street", "street2",
+            "city", "state_id", "zip", "country_id", "vat",
+          ]);
+          if (partners.length > 0) partner = partners[0];
+        } catch (e: any) {
+          log(`Warning: could not fetch PO partner: ${e.message}`, "odoo");
+        }
+      }
+
+      res.json({ order, orderLines, invoices, partner });
+    } catch (err: any) {
+      log(`Error fetching Odoo PO detail: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/bills/:id", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const billId = parseInt(req.params.id);
+      if (isNaN(billId)) {
+        return res.status(400).json({ message: "Invalid bill ID" });
+      }
+
+      const bills = await odoo.read("account.move", [billId], [
+        "name", "partner_id", "invoice_date", "invoice_date_due",
+        "state", "payment_state", "amount_total", "amount_residual",
+        "amount_untaxed", "amount_tax", "currency_id",
+        "invoice_origin", "ref", "create_date", "write_date",
+        "invoice_line_ids", "narration",
+      ]);
+
+      if (!bills || bills.length === 0) {
+        return res.status(404).json({ message: "Bill not found" });
+      }
+
+      const bill = bills[0];
+
+      let lines: any[] = [];
+      if (bill.invoice_line_ids && bill.invoice_line_ids.length > 0) {
+        try {
+          lines = await odoo.read("account.move.line", bill.invoice_line_ids, [
+            "name", "product_id", "quantity", "price_unit",
+            "price_subtotal", "price_total", "discount",
+            "account_id", "tax_ids",
+          ]);
+        } catch (e: any) {
+          log(`Warning: could not fetch bill lines: ${e.message}`, "odoo");
+        }
+      }
+
+      let partner: any = null;
+      if (bill.partner_id && Array.isArray(bill.partner_id)) {
+        try {
+          const partners = await odoo.read("res.partner", [bill.partner_id[0]], [
+            "name", "email", "phone", "mobile", "street", "street2",
+            "city", "state_id", "zip", "country_id", "vat",
+          ]);
+          if (partners.length > 0) partner = partners[0];
+        } catch (e: any) {
+          log(`Warning: could not fetch bill partner: ${e.message}`, "odoo");
+        }
+      }
+
+      res.json({ bill, lines, partner });
+    } catch (err: any) {
+      log(`Error fetching Odoo bill detail: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/odoo/invoices", async (req, res) => {
     try {
       const odoo = getOdooClient();

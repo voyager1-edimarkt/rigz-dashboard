@@ -20,11 +20,12 @@ import Inventory from "@/pages/inventory";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import OdooProducts from "@/pages/odoo-products";
-import OdooPurchaseOrders from "@/pages/odoo-purchase-orders";
 import OdooVendors from "@/pages/odoo-vendors";
-import OdooBills from "@/pages/odoo-bills";
 import SalesFlow, { CustomersTab } from "@/pages/sales-flow";
+import PurchaseFlow from "@/pages/purchase-flow";
 import OdooOrderDetail from "@/pages/odoo-order-detail";
+import OdooPODetail from "@/pages/odoo-po-detail";
+import OdooBillDetail from "@/pages/odoo-bill-detail";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -67,11 +68,18 @@ function AppContent() {
               <Route path="/odoo/vendors">
                 <OdooVendors />
               </Route>
-              <Route path="/odoo/purchase-orders">
-                <OdooPurchaseOrders />
+              <Route path="/purchase-flow/orders/:id">
+                {(params: { id: string }) => (
+                  <OdooPODetail poId={Number(params.id)} />
+                )}
               </Route>
-              <Route path="/odoo/bills">
-                <OdooBills />
+              <Route path="/purchase-flow/bills/:id">
+                {(params: { id: string }) => (
+                  <OdooBillDetail billId={Number(params.id)} />
+                )}
+              </Route>
+              <Route path="/purchase-flow">
+                <PurchaseFlow />
               </Route>
               <Route path="/odoo/products">
                 <OdooProducts />

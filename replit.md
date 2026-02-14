@@ -49,14 +49,22 @@ Preferred communication style: Simple, everyday language.
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Dashboard | Executive overview with stats, charts, maps |
-| `/customers` | Customers | Customer list with filters and detail sheets |
-| `/orders` | Orders | Order list with detail dialogs |
-| `/orders/:id` | Order Detail | Deep-dive order view |
-| `/products` | Products | Product catalog with stats |
-| `/purchase-orders` | Purchase Orders | PO list and management |
-| `/purchase-orders/:id` | PO Detail | Purchase order detail view |
+| `/sales-flow` | Sales Flow | Orders & Invoices with inline invoice status |
+| `/sales-flow/customers` | Customers | Odoo customer list |
+| `/sales-flow/orders/:id` | Order Detail | Deep-dive Odoo order view with line items, invoices, timeline |
+| `/purchase-flow` | Purchase Flow | POs & Bills combined with tabs |
+| `/purchase-flow/orders/:id` | PO Detail | Deep-dive Odoo PO view with line items, bills, timeline |
+| `/purchase-flow/bills/:id` | Bill Detail | Deep-dive Odoo bill view with line items, vendor, timeline |
+| `/odoo/vendors` | Vendors | Odoo vendor list |
+| `/odoo/products` | Products | Odoo product catalog |
+| `/customers` | Customers (Legacy) | Legacy MySQL customer list |
+| `/orders` | Orders (Legacy) | Legacy MySQL order list |
+| `/orders/:id` | Order Detail (Legacy) | Legacy order view |
+| `/products` | Products (Legacy) | Legacy product catalog |
+| `/purchase-orders` | Purchase Orders (Legacy) | Legacy PO list |
+| `/purchase-orders/:id` | PO Detail (Legacy) | Legacy PO detail |
 | `/suppliers` | Suppliers | Supplier management |
-| `/vendors` | Vendors | Vendor management |
+| `/vendors` | Vendors (Legacy) | Legacy vendor management |
 | `/warehouses` | Warehouses | Warehouse overview |
 | `/inventory` | Inventory | Inventory tracking with charts |
 | `/errors` | Errors | Error log viewer |
