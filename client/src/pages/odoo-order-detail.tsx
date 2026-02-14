@@ -106,12 +106,12 @@ export default function OdooOrderDetail({ orderId }: { orderId: number }) {
         <Separator orientation="vertical" className="h-6" />
         <div className="flex items-center gap-2">
           <ShoppingCart className="w-5 h-5" />
-          <div>
-            <h1 className="text-xl font-semibold" data-testid="text-order-name">{order.name}</h1>
+          <h1 className="text-xl font-semibold" data-testid="text-order-name">
+            {order.name}
             {order.client_order_ref && (
-              <p className="text-xs text-muted-foreground" data-testid="text-customer-ref">({order.client_order_ref})</p>
+              <span className="text-sm font-normal text-muted-foreground ml-1.5" data-testid="text-customer-ref">({order.client_order_ref})</span>
             )}
-          </div>
+          </h1>
         </div>
         <Badge variant={orderStateVariants[order.state] || "outline"} data-testid="badge-order-state">
           {orderStateLabels[order.state] || order.state}
