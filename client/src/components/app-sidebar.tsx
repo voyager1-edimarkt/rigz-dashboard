@@ -47,12 +47,22 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  className={location === "/sales-flow" ? "bg-sidebar-accent" : ""}
+                  className={location === "/sales-flow/customers" ? "bg-sidebar-accent" : ""}
+                  onClick={() => setLocation("/sales-flow/customers")}
+                  data-testid="button-sales-customers"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Customers</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className={location === "/sales-flow" || location.startsWith("/sales-flow/orders") ? "bg-sidebar-accent" : ""}
                   onClick={() => setLocation("/sales-flow")}
                   data-testid="button-sales-flow"
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  <span>Sales Flow</span>
+                  <span>Orders & Invoices</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

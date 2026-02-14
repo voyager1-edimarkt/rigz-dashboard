@@ -23,7 +23,7 @@ import OdooProducts from "@/pages/odoo-products";
 import OdooPurchaseOrders from "@/pages/odoo-purchase-orders";
 import OdooVendors from "@/pages/odoo-vendors";
 import OdooBills from "@/pages/odoo-bills";
-import SalesFlow from "@/pages/sales-flow";
+import SalesFlow, { CustomersTab } from "@/pages/sales-flow";
 import OdooOrderDetail from "@/pages/odoo-order-detail";
 import NotFound from "@/pages/not-found";
 
@@ -48,13 +48,21 @@ function AppContent() {
               <Route path="/">
                 <Dashboard />
               </Route>
-              <Route path="/sales-flow">
-                <SalesFlow />
+              <Route path="/sales-flow/customers">
+                <div className="h-full overflow-auto p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-semibold">Customers</span>
+                  </div>
+                  <CustomersTab />
+                </div>
               </Route>
               <Route path="/sales-flow/orders/:id">
                 {(params: { id: string }) => (
                   <OdooOrderDetail orderId={Number(params.id)} />
                 )}
+              </Route>
+              <Route path="/sales-flow">
+                <SalesFlow />
               </Route>
               <Route path="/odoo/vendors">
                 <OdooVendors />

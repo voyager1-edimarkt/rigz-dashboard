@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Users, ShoppingCart, FileText, ArrowRight,
+  Users, ShoppingCart, FileText,
 } from "lucide-react";
 
 interface OdooPartner {
@@ -189,7 +188,7 @@ function LoadingSkeleton() {
   );
 }
 
-function CustomersTab() {
+export function CustomersTab() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
@@ -456,63 +455,15 @@ function OrdersAndInvoicesTab() {
   );
 }
 
-const steps = [
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "orders", label: "Orders & Invoices", icon: ShoppingCart },
-] as const;
-
-type StepId = typeof steps[number]["id"];
-
 export default function SalesFlow() {
-  const [activeTab, setActiveTab] = useState<StepId>("customers");
-
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
       <div className="flex items-center gap-2">
         <ShoppingCart className="w-5 h-5" />
-        <h1 className="text-xl font-semibold" data-testid="text-page-title">Sales Flow</h1>
+        <h1 className="text-xl font-semibold" data-testid="text-page-title">Orders & Invoices</h1>
       </div>
 
-      <div className="flex items-center justify-center gap-1 py-2" data-testid="workflow-pipeline">
-        {steps.map((step, idx) => {
-          const Icon = step.icon;
-          const isActive = step.id === activeTab;
-          return (
-            <div key={step.id} className="flex items-center gap-1">
-              <button
-                onClick={() => setActiveTab(step.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
-                  ${isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover-elevate"
-                  }`}
-                data-testid={`button-step-${step.id}`}
-              >
-                <Icon className="w-4 h-4" />
-                {step.label}
-              </button>
-              {idx < steps.length - 1 && (
-                <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as StepId)}>
-        <TabsList className="sr-only">
-          <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="orders">Orders & Invoices</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="customers">
-          <CustomersTab />
-        </TabsContent>
-        <TabsContent value="orders">
-          <OrdersAndInvoicesTab />
-        </TabsContent>
-      </Tabs>
-
+      <OrdersAndInvoicesTab />
     </div>
   );
 }
