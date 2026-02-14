@@ -104,10 +104,6 @@ export default function OdooOrderDetail({ orderId }: { orderId: number }) {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
         <Separator orientation="vertical" className="h-6" />
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5" />
-          <h1 className="text-xl font-semibold" data-testid="text-order-name">{order.name}</h1>
-        </div>
         <Badge variant={orderStateVariants[order.state] || "outline"} data-testid="badge-order-state">
           {orderStateLabels[order.state] || order.state}
         </Badge>
@@ -117,6 +113,7 @@ export default function OdooOrderDetail({ orderId }: { orderId: number }) {
           </Badge>
         )}
       </div>
+      <p className="text-sm text-muted-foreground" data-testid="text-order-name">Ref: {order.name}</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card data-testid="card-order-total">
