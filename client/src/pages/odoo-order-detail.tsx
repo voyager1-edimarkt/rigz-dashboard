@@ -118,6 +118,12 @@ export default function OdooOrderDetail({ orderId }: { orderId: number }) {
         )}
       </div>
 
+      {order.client_order_ref && (
+        <p className="text-sm text-muted-foreground" data-testid="text-customer-ref">
+          Ref: {order.client_order_ref}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card data-testid="card-order-total">
           <CardContent className="p-4">
