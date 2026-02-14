@@ -291,7 +291,21 @@ function CustomersTab() {
   );
 }
 
-function SaleOrdersTab({ onSelectOrder }: { onSelectOrder: (id: number) => void }) {
+interface InvoiceSummary {
+  id: number;
+  name: string;
+  state: string;
+  payment_state: string;
+  amount_total: number;
+  amount_residual: number;
+}
+
+interface SaleOrderWithInvoice extends OdooSaleOrder {
+  invoice_ids: number[];
+  invoices_summary: InvoiceSummary[];
+}
+
+function OrdersAndInvoicesTab({ onSelectOrder }: { onSelectOrder: (id: number) => void }) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [state, setState] = useState("all");
@@ -312,7 +326,7 @@ function SaleOrdersTab({ onSelectOrder }: { onSelectOrder: (id: number) => void 
   if (dateFrom) queryParams.set("dateFrom", dateFrom);
   if (dateTo) queryParams.set("dateTo", dateTo);
 
-  const { data, isLoading, error, isFetching } = useQuery<{ records: OdooSaleOrder[]; total: number }>({
+  const { data, isLoading, error, isFetching } = useQuery<{ records: SaleOrderWithInvoice[]; total: number }>({
     queryKey: ["/api/odoo/sale-orders", debouncedSearch, state, dateFrom, dateTo, offset, pageSize],
     queryFn: async () => {
       const res = await fetch(`/api/odoo/sale-orders?${queryParams.toString()}`);
@@ -333,7 +347,14 @@ function SaleOrdersTab({ onSelectOrder }: { onSelectOrder: (id: number) => void 
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            {data && <Badge variant="secondary" data-testid="badge-orders-count">{data.total.toLocaleString()} orders</Badge>}
+            {data && (
+              <>
+                <Badge variant="secondary" data-testid="badge-orders-count">{data.total.toLocaleString()} orders</Badge>
+                <Badge variant="outline" data-testid="badge-invoiced-count">
+                  {data.records.filter(o => o.invoice_ids?.length > 0).length} invoiced
+                </Badge>
+              </>
+            )}
             {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
           </div>
         </div>
@@ -365,9 +386,9 @@ function SaleOrdersTab({ onSelectOrder }: { onSelectOrder: (id: number) => void 
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? <LoadingSkeleton /> : error ? (
-          <div className="p-6 text-center text-destructive">Failed to load sale orders.</div>
+          <div className="p-6 text-center text-destructive">Failed to load orders.</div>
         ) : !data?.records.length ? (
-          <div className="p-6 text-center text-muted-foreground">No sale orders found.</div>
+          <div className="p-6 text-center text-muted-foreground">No orders found.</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -377,175 +398,55 @@ function SaleOrdersTab({ onSelectOrder }: { onSelectOrder: (id: number) => void 
                   <TableHead>Customer</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Untaxed</TableHead>
-                  <TableHead className="text-right">Tax</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Lines</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.records.map((o) => (
-                  <TableRow key={o.id} data-testid={`row-order-${o.id}`}
-                    className="cursor-pointer"
-                    onClick={() => onSelectOrder(o.id)}>
-                    <TableCell className="font-medium">{o.name}</TableCell>
-                    <TableCell>{Array.isArray(o.partner_id) ? o.partner_id[1] : "-"}</TableCell>
-                    <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={orderStateVariants[o.state] || "outline"}>
-                        {orderStateLabels[o.state] || o.state}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">${o.amount_untaxed.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono">${o.amount_tax.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold">${o.amount_total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{o.order_line?.length || 0}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        {data && <Pagination page={page} totalPages={totalPages} pageSize={pageSize} total={data.total}
-          offset={offset} setPage={setPage} jumpInput={jumpInput} setJumpInput={setJumpInput} handleJump={handleJump} />}
-      </CardContent>
-    </Card>
-  );
-}
-
-function InvoicesTab() {
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 400);
-  const [state, setState] = useState("all");
-  const [paymentState, setPaymentState] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [jumpInput, setJumpInput] = useState("");
-
-  useEffect(() => { setPage(1); }, [debouncedSearch, state, paymentState, dateFrom, dateTo, pageSize]);
-
-  const offset = (page - 1) * pageSize;
-  const queryParams = new URLSearchParams();
-  queryParams.set("limit", String(pageSize));
-  queryParams.set("offset", String(offset));
-  if (debouncedSearch) queryParams.set("search", debouncedSearch);
-  if (state !== "all") queryParams.set("state", state);
-  if (paymentState !== "all") queryParams.set("paymentState", paymentState);
-  if (dateFrom) queryParams.set("dateFrom", dateFrom);
-  if (dateTo) queryParams.set("dateTo", dateTo);
-
-  const { data, isLoading, error, isFetching } = useQuery<{ records: OdooInvoice[]; total: number }>({
-    queryKey: ["/api/odoo/invoices", debouncedSearch, state, paymentState, dateFrom, dateTo, offset, pageSize],
-    queryFn: async () => {
-      const res = await fetch(`/api/odoo/invoices?${queryParams.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch invoices");
-      return res.json();
-    },
-    placeholderData: (prev) => prev,
-  });
-
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
-  const handleJump = useCallback(() => {
-    const p = parseInt(jumpInput);
-    if (p >= 1 && p <= totalPages) { setPage(p); setJumpInput(""); }
-  }, [jumpInput, totalPages]);
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            {data && <Badge variant="secondary" data-testid="badge-invoices-count">{data.total.toLocaleString()} invoices</Badge>}
-            {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap mt-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search by invoice, customer, or source..." value={search}
-              onChange={(e) => setSearch(e.target.value)} className="pl-9" data-testid="input-search-invoices" />
-          </div>
-          <Select value={state} onValueChange={setState}>
-            <SelectTrigger className="w-[140px]" data-testid="select-invoice-state">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="posted">Posted</SelectItem>
-              <SelectItem value="cancel">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={paymentState} onValueChange={setPaymentState}>
-            <SelectTrigger className="w-[140px]" data-testid="select-payment-filter">
-              <SelectValue placeholder="Payment" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Payments</SelectItem>
-              <SelectItem value="not_paid">Not Paid</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="in_payment">In Payment</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-            className="w-[150px]" data-testid="input-invoice-date-from" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-            className="w-[150px]" data-testid="input-invoice-date-to" />
-          <PageSizeSelector pageSize={pageSize} setPageSize={setPageSize} />
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        {isLoading ? <LoadingSkeleton /> : error ? (
-          <div className="p-6 text-center text-destructive">Failed to load invoices.</div>
-        ) : !data?.records.length ? (
-          <div className="p-6 text-center text-muted-foreground">No invoices found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
                   <TableHead>Invoice</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Invoice Date</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Due</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.records.map((inv) => (
-                  <TableRow key={inv.id} data-testid={`row-invoice-${inv.id}`}>
-                    <TableCell className="font-medium">{inv.name}</TableCell>
-                    <TableCell>{Array.isArray(inv.partner_id) ? inv.partner_id[1] : "-"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{inv.invoice_origin || "-"}</TableCell>
-                    <TableCell className="text-sm">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell className="text-sm">{inv.invoice_date_due ? new Date(inv.invoice_date_due).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={invoiceStateVariants[inv.state] || "outline"}>
-                        {invoiceStateLabels[inv.state] || inv.state}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={paymentVariants[inv.payment_state] || "outline"}>
-                        {paymentLabels[inv.payment_state] || inv.payment_state}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold">${inv.amount_total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {inv.amount_residual > 0 ? (
-                        <span className="text-destructive">${inv.amount_residual.toFixed(2)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">$0.00</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {data.records.map((o) => {
+                  const hasInvoice = o.invoice_ids?.length > 0;
+                  return (
+                    <TableRow key={o.id} data-testid={`row-order-${o.id}`}
+                      className="cursor-pointer"
+                      onClick={() => onSelectOrder(o.id)}>
+                      <TableCell className="font-medium">{o.name}</TableCell>
+                      <TableCell>{Array.isArray(o.partner_id) ? o.partner_id[1] : "-"}</TableCell>
+                      <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={orderStateVariants[o.state] || "outline"}>
+                          {orderStateLabels[o.state] || o.state}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">${o.amount_total.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{o.order_line?.length || 0}</TableCell>
+                      <TableCell>
+                        {hasInvoice && o.invoices_summary?.length > 0 ? (
+                          <div className="flex flex-col gap-1" data-testid={`badge-invoice-status-${o.id}`}>
+                            {o.invoices_summary.map((inv) => (
+                              <div key={inv.id} className="flex items-center gap-1 flex-wrap">
+                                <Badge variant={invoiceStateVariants[inv.state] || "outline"} className="text-xs">
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  {inv.name || "Draft"}
+                                </Badge>
+                                <Badge variant={paymentVariants[inv.payment_state] || "outline"} className="text-xs">
+                                  {paymentLabels[inv.payment_state] || inv.payment_state}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : hasInvoice ? (
+                          <Badge variant="outline" data-testid={`badge-invoice-status-${o.id}`}>
+                            <FileText className="w-3 h-3 mr-1" />
+                            {o.invoice_ids.length} Invoice{o.invoice_ids.length !== 1 ? "s" : ""}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground" data-testid={`badge-invoice-status-${o.id}`}>No invoice</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -736,8 +637,7 @@ function SaleOrderTimeline({ orderId, onClose }: { orderId: number | null; onClo
 
 const steps = [
   { id: "customers", label: "Customers", icon: Users },
-  { id: "orders", label: "Sale Orders", icon: ShoppingCart },
-  { id: "invoices", label: "Invoices", icon: FileText },
+  { id: "orders", label: "Orders & Invoices", icon: ShoppingCart },
 ] as const;
 
 type StepId = typeof steps[number]["id"];
@@ -782,18 +682,14 @@ export default function SalesFlow() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as StepId)}>
         <TabsList className="sr-only">
           <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="orders">Sale Orders</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="orders">Orders & Invoices</TabsTrigger>
         </TabsList>
 
         <TabsContent value="customers">
           <CustomersTab />
         </TabsContent>
         <TabsContent value="orders">
-          <SaleOrdersTab onSelectOrder={(id) => setSelectedOrderId(id)} />
-        </TabsContent>
-        <TabsContent value="invoices">
-          <InvoicesTab />
+          <OrdersAndInvoicesTab onSelectOrder={(id) => setSelectedOrderId(id)} />
         </TabsContent>
       </Tabs>
 

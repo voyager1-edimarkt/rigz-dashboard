@@ -487,7 +487,34 @@ export async function registerRoutes(
       if (dateTo) filters.push(["date_order", "<=", dateTo]);
 
       const result = await odoo.getSaleOrders(filters, offset, limit);
-      res.json(result);
+
+      const allInvoiceIds: number[] = [];
+      for (const order of result.records) {
+        if (order.invoice_ids && order.invoice_ids.length > 0) {
+          allInvoiceIds.push(...order.invoice_ids);
+        }
+      }
+
+      let invoiceMap: Record<number, { id: number; name: string; state: string; payment_state: string; amount_total: number; amount_residual: number }> = {};
+      if (allInvoiceIds.length > 0) {
+        try {
+          const invoices = await odoo.read("account.move", allInvoiceIds, [
+            "name", "state", "payment_state", "amount_total", "amount_residual",
+          ]);
+          for (const inv of invoices) {
+            invoiceMap[inv.id] = inv;
+          }
+        } catch (e: any) {
+          log(`Warning: could not fetch invoice details: ${e.message}`, "odoo");
+        }
+      }
+
+      const enrichedRecords = result.records.map((order: any) => ({
+        ...order,
+        invoices_summary: (order.invoice_ids || []).map((invId: number) => invoiceMap[invId]).filter(Boolean),
+      }));
+
+      res.json({ records: enrichedRecords, total: result.total });
     } catch (err: any) {
       log(`Error fetching Odoo sale orders: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });
