@@ -35,20 +35,24 @@ function AppContent() {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-            </div>
-          </header>
-          <main className="flex-1 min-h-0 overflow-hidden">
-            <Switch>
-              <Route path="/">
-                <Dashboard />
-              </Route>
+    <Switch>
+      <Route path="/">
+        <div className="h-screen w-full">
+          <Dashboard />
+        </div>
+      </Route>
+      <Route>
+        <SidebarProvider style={style as React.CSSProperties}>
+          <div className="flex h-screen w-full">
+            <AppSidebar />
+            <div className="flex flex-col flex-1 min-w-0">
+              <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                </div>
+              </header>
+              <main className="flex-1 min-h-0 overflow-hidden">
+                <Switch>
               <Route path="/sales-flow/customers">
                 <div className="h-full overflow-auto p-4 space-y-4">
                   <div className="flex items-center gap-2">
@@ -129,12 +133,14 @@ function AppContent() {
               <Route path="/query">
                 <QueryRunner database={null} />
               </Route>
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+                  <Route component={NotFound} />
+                </Switch>
+              </main>
+            </div>
+          </div>
+        </SidebarProvider>
+      </Route>
+    </Switch>
   );
 }
 
