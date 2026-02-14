@@ -494,6 +494,44 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/odoo/sale-orders/:id/timeline", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+
+      const orders = await odoo.read("sale.order", [orderId], [
+        "name", "partner_id", "partner_invoice_id", "partner_shipping_id",
+        "date_order", "state", "amount_total", "amount_untaxed",
+        "amount_tax", "order_line", "invoice_ids",
+        "currency_id", "create_date", "write_date",
+      ]);
+
+      if (!orders || orders.length === 0) {
+        return res.status(404).json({ message: "Sale order not found" });
+      }
+
+      const order = orders[0];
+
+      let invoices: any[] = [];
+      if (order.invoice_ids && order.invoice_ids.length > 0) {
+        invoices = await odoo.read("account.move", order.invoice_ids, [
+          "name", "partner_id", "invoice_date", "invoice_date_due",
+          "state", "payment_state", "amount_total", "amount_residual",
+          "amount_untaxed", "amount_tax", "currency_id",
+          "invoice_origin", "ref", "create_date", "write_date",
+        ]);
+      }
+
+      res.json({ order, invoices });
+    } catch (err: any) {
+      log(`Error fetching sale order timeline: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/odoo/purchase-orders", async (req, res) => {
     try {
       const odoo = getOdooClient();
