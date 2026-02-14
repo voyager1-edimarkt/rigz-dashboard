@@ -358,19 +358,6 @@ export default function OdooOrderDetail({ orderId }: { orderId: number }) {
             </CardContent>
           </Card>
 
-          {(order.note || order.client_order_ref) && (
-            <Card data-testid="card-notes">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {order.client_order_ref && (
-                  <p><span className="text-muted-foreground">Customer Ref:</span> {order.client_order_ref}</p>
-                )}
-                {order.note && <p className="text-muted-foreground whitespace-pre-wrap">{order.note}</p>}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
