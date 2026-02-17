@@ -4,3 +4,10 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+ODOO_URL = "https://rigz.odoo.com/jsonrpc"
+ODOO_DB = "rigz"
+ODOO_USER = "anshumanbezbaruah@edimarkt.com.au"
