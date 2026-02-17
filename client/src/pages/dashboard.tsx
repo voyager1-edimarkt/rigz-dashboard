@@ -56,6 +56,11 @@ interface OrderStats {
   recentByDay: { day: string; cnt: number }[];
 }
 
+interface PipelineStats {
+  so: { total: number; salesOrder: number; delivery: number; invoiced: number; paid: number };
+  po: { total: number; purchaseOrder: number; receipt: number; billed: number; paid: number };
+}
+
 
 function getColorUS(count: number, max: number): string {
   if (count === 0) return "#f1f5f9";
@@ -127,6 +132,19 @@ export default function Dashboard() {
   const orderStatsUrl = `/api/odoo/orders/stats${orderStatsParams.toString() ? `?${orderStatsParams}` : ""}`;
   const { data: orderStats, isLoading: orderStatsLoading } = useQuery<OrderStats>({
     queryKey: [orderStatsUrl],
+  });
+
+  const pipelineParams = new URLSearchParams();
+  if (pipelineDateFrom) pipelineParams.set("dateFrom", pipelineDateFrom);
+  if (pipelineDateTo) pipelineParams.set("dateTo", pipelineDateTo);
+  const pipelineUrl = `/api/odoo/pipeline-stats${pipelineParams.toString() ? `?${pipelineParams}` : ""}`;
+  const { data: pipelineStats, isLoading: pipelineLoading } = useQuery<PipelineStats>({
+    queryKey: ["/api/odoo/pipeline-stats", pipelineDateFrom, pipelineDateTo],
+    queryFn: async () => {
+      const res = await fetch(pipelineUrl);
+      if (!res.ok) throw new Error(`Failed: ${res.status}`);
+      return res.json();
+    },
   });
 
 
@@ -383,11 +401,11 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
   </Card>
 </div>
 
-      <Card className="mb-4" data-testid="card-order-pipeline">
+      <Card className="mb-4" data-testid="card-pipeline-section">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Truck className="w-4 h-4 text-muted-foreground" />
-            <CardTitle className="text-sm">Order Pipeline</CardTitle>
+            <CardTitle className="text-sm">Order Pipelines</CardTitle>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <Select value={pipelinePreset} onValueChange={setPipelinePreset}>
@@ -423,97 +441,116 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
                 />
               </>
             )}
-            <Badge variant="outline">{orderStats?.total.toLocaleString() ?? "..."} total orders</Badge>
           </div>
         </CardHeader>
         <CardContent>
-          {orderStatsLoading || errorStatsLoading ? (
-            <Skeleton className="h-[100px] w-full" />
-          ) : (() => {
-            const statusMap: Record<string, number> = {};
-            orderStats?.byStatus?.forEach((s) => { statusMap[s.status] = s.cnt; });
-            const stages = [
-              {
-                label: "Received",
-                count: statusMap["PO_RECEIVED"] ?? 0,
-                icon: ShoppingCart,
-                color: "bg-blue-500/15",
-                iconColor: "text-blue-600 dark:text-blue-400",
-                barColor: "bg-blue-500",
-                path: "/orders",
-              },
-              {
-                label: "PO Sent",
-                count: statusMap["PO_SENT"] ?? 0,
-                icon: FileCheck,
-                color: "bg-amber-500/15",
-                iconColor: "text-amber-600 dark:text-amber-400",
-                barColor: "bg-amber-500",
-                path: "/purchase-orders",
-              },
-              {
-                label: "Fulfillment",
-                count: statusMap["FULFILLMENT_READY"] ?? 0,
-                icon: Package,
-                color: "bg-purple-500/15",
-                iconColor: "text-purple-600 dark:text-purple-400",
-                barColor: "bg-purple-500",
-                path: "/orders",
-              },
-              {
-                label: "Invoiced",
-                count: (statusMap["INVOICE_SENT"] ?? 0) + (statusMap["INVOICE_RECEIPT"] ?? 0),
-                icon: DollarSign,
-                color: "bg-emerald-500/15",
-                iconColor: "text-emerald-600 dark:text-emerald-400",
-                barColor: "bg-emerald-500",
-                path: "/orders",
-              },
-              {
-                label: "Cancelled",
-                count: statusMap["CANCELLED"] ?? 0,
-                icon: XCircle,
-                color: "bg-stone-500/15",
-                iconColor: "text-stone-500 dark:text-stone-400",
-                barColor: "bg-stone-400",
-                path: "/orders",
-              },
-            ];
-            const maxCount = Math.max(...stages.map((s) => s.count), 1);
-            return (
-              <div className="flex items-stretch gap-1 flex-wrap">
-                {stages.map((stage, i) => (
-                  <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[120px]">
-                    <div
-                      className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
-                      onClick={() => navigate(stage.path)}
-                      data-testid={`pipeline-stage-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`flex items-center justify-center w-7 h-7 rounded-md ${stage.color}`}>
-                          <stage.icon className={`w-3.5 h-3.5 ${stage.iconColor}`} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-muted-foreground leading-tight">{stage.label}</p>
-                          <p className="text-sm font-bold leading-tight">{stage.count.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full ${stage.barColor} transition-all`}
-                          style={{ width: `${Math.max((stage.count / maxCount) * 100, 2)}%` }}
-                        />
-                      </div>
+          {pipelineLoading ? (
+            <Skeleton className="h-[200px] w-full" />
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const so = pipelineStats?.so;
+                const soStages = [
+                  { label: "Sales Order", count: so?.salesOrder ?? 0, icon: ShoppingCart, color: "bg-blue-500/15", iconColor: "text-blue-600 dark:text-blue-400", barColor: "bg-blue-500" },
+                  { label: "Delivery", count: so?.delivery ?? 0, icon: Truck, color: "bg-amber-500/15", iconColor: "text-amber-600 dark:text-amber-400", barColor: "bg-amber-500" },
+                  { label: "Invoiced", count: so?.invoiced ?? 0, icon: Receipt, color: "bg-purple-500/15", iconColor: "text-purple-600 dark:text-purple-400", barColor: "bg-purple-500" },
+                  { label: "Paid", count: so?.paid ?? 0, icon: CheckCircle, color: "bg-emerald-500/15", iconColor: "text-emerald-600 dark:text-emerald-400", barColor: "bg-emerald-500" },
+                ];
+                const soMax = Math.max(...soStages.map(s => s.count), 1);
+                return (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs">SO</Badge>
+                      <span className="text-xs text-muted-foreground">Sales Order Pipeline</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">{(so?.total ?? 0).toLocaleString()} total</Badge>
                     </div>
-                    {i < stages.length - 1 && i !== 3 && (
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
-                    )}
-                    {i === 3 && <div className="w-3.5 shrink-0" />}
+                    <div className="flex items-stretch gap-1 flex-wrap">
+                      {soStages.map((stage, i) => (
+                        <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[100px]">
+                          <div
+                            className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
+                            onClick={() => navigate("/orders")}
+                            data-testid={`pipeline-so-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`flex items-center justify-center w-7 h-7 rounded-md ${stage.color}`}>
+                                <stage.icon className={`w-3.5 h-3.5 ${stage.iconColor}`} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground leading-tight">{stage.label}</p>
+                                <p className="text-sm font-bold leading-tight">{stage.count.toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${stage.barColor} transition-all`}
+                                style={{ width: `${Math.max((stage.count / soMax) * 100, 2)}%` }}
+                              />
+                            </div>
+                          </div>
+                          {i < soStages.length - 1 && (
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            );
-          })()}
+                );
+              })()}
+
+              <div className="border-t" />
+
+              {(() => {
+                const po = pipelineStats?.po;
+                const poStages = [
+                  { label: "Purchase Order", count: po?.purchaseOrder ?? 0, icon: FileCheck, color: "bg-blue-500/15", iconColor: "text-blue-600 dark:text-blue-400", barColor: "bg-blue-500" },
+                  { label: "Receipt", count: po?.receipt ?? 0, icon: Package, color: "bg-amber-500/15", iconColor: "text-amber-600 dark:text-amber-400", barColor: "bg-amber-500" },
+                  { label: "Billed", count: po?.billed ?? 0, icon: Receipt, color: "bg-purple-500/15", iconColor: "text-purple-600 dark:text-purple-400", barColor: "bg-purple-500" },
+                  { label: "Paid", count: po?.paid ?? 0, icon: CheckCircle, color: "bg-emerald-500/15", iconColor: "text-emerald-600 dark:text-emerald-400", barColor: "bg-emerald-500" },
+                ];
+                const poMax = Math.max(...poStages.map(s => s.count), 1);
+                return (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs">PO</Badge>
+                      <span className="text-xs text-muted-foreground">Purchase Order Pipeline</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">{(po?.total ?? 0).toLocaleString()} total</Badge>
+                    </div>
+                    <div className="flex items-stretch gap-1 flex-wrap">
+                      {poStages.map((stage, i) => (
+                        <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[100px]">
+                          <div
+                            className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
+                            onClick={() => navigate("/purchase-orders")}
+                            data-testid={`pipeline-po-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`flex items-center justify-center w-7 h-7 rounded-md ${stage.color}`}>
+                                <stage.icon className={`w-3.5 h-3.5 ${stage.iconColor}`} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground leading-tight">{stage.label}</p>
+                                <p className="text-sm font-bold leading-tight">{stage.count.toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${stage.barColor} transition-all`}
+                                style={{ width: `${Math.max((stage.count / poMax) * 100, 2)}%` }}
+                              />
+                            </div>
+                          </div>
+                          {i < poStages.length - 1 && (
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </CardContent>
       </Card>
 

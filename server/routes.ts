@@ -2004,5 +2004,171 @@ app.get("/api/odoo/aov-trend", async (req, res) => {
     }
   });
 
+  app.get("/api/odoo/pipeline-stats", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const soDomain: any[] = [["state", "not in", ["cancel"]]];
+      if (dateFrom) soDomain.push(["date_order", ">=", dateFrom]);
+      if (dateTo) soDomain.push(["date_order", "<=", dateTo]);
+
+      const soOrders = await odoo.searchRead(
+        "sale.order",
+        soDomain,
+        ["state", "invoice_status", "delivery_status", "invoice_ids"],
+        0,
+        50000
+      );
+
+      let soSalesOrder = 0;
+      let soDelivery = 0;
+      let soInvoiced = 0;
+      let soPaid = 0;
+      const soTotal = soOrders.length;
+
+      const soInvoiceIds: number[] = [];
+      const soOrderInvoiceMap: Record<number, number[]> = {};
+
+      for (let i = 0; i < soOrders.length; i++) {
+        const o = soOrders[i];
+        const state = o.state || "draft";
+
+        if (state === "sale" || state === "done") {
+          soSalesOrder++;
+        } else {
+          soSalesOrder++;
+        }
+
+        const deliveryStatus = o.delivery_status;
+        if (deliveryStatus === "full" || deliveryStatus === "partial") {
+          soDelivery++;
+        }
+
+        const invoiceStatus = o.invoice_status || "no";
+        if (invoiceStatus === "invoiced" || invoiceStatus === "upselling") {
+          soInvoiced++;
+        }
+
+        if (Array.isArray(o.invoice_ids) && o.invoice_ids.length > 0) {
+          soOrderInvoiceMap[i] = o.invoice_ids;
+          soInvoiceIds.push(...o.invoice_ids);
+        }
+      }
+
+      if (soInvoiceIds.length > 0) {
+        try {
+          const uniqueIds = [...new Set(soInvoiceIds)];
+          const invoices = await odoo.read("account.move", uniqueIds, ["id", "payment_state"]);
+          const invoicePaymentMap: Record<number, string> = {};
+          for (const inv of invoices) {
+            invoicePaymentMap[inv.id] = inv.payment_state || "not_paid";
+          }
+
+          for (let i = 0; i < soOrders.length; i++) {
+            const invIds = soOrderInvoiceMap[i];
+            if (!invIds || invIds.length === 0) continue;
+            const allPaid = invIds.every(
+              (id: number) => invoicePaymentMap[id] === "paid" || invoicePaymentMap[id] === "in_payment"
+            );
+            if (allPaid) soPaid++;
+          }
+        } catch (e: any) {
+          log(`Warning: could not fetch SO invoice payment states: ${e.message}`, "odoo");
+        }
+      }
+
+      const poDomain: any[] = [["state", "not in", ["cancel"]]];
+      if (dateFrom) poDomain.push(["date_order", ">=", dateFrom]);
+      if (dateTo) poDomain.push(["date_order", "<=", dateTo]);
+
+      const poOrders = await odoo.searchRead(
+        "purchase.order",
+        poDomain,
+        ["state", "invoice_status", "receipt_status", "invoice_ids"],
+        0,
+        50000
+      );
+
+      let poPurchaseOrder = 0;
+      let poReceipt = 0;
+      let poBilled = 0;
+      let poPaid = 0;
+      const poTotal = poOrders.length;
+
+      const poInvoiceIds: number[] = [];
+      const poOrderInvoiceMap: Record<number, number[]> = {};
+
+      for (let i = 0; i < poOrders.length; i++) {
+        const o = poOrders[i];
+        const state = o.state || "draft";
+
+        if (state === "purchase" || state === "done") {
+          poPurchaseOrder++;
+        } else {
+          poPurchaseOrder++;
+        }
+
+        const receiptStatus = o.receipt_status;
+        if (receiptStatus === "full" || receiptStatus === "partial") {
+          poReceipt++;
+        }
+
+        const invoiceStatus = o.invoice_status || "no";
+        if (invoiceStatus === "invoiced") {
+          poBilled++;
+        }
+
+        if (Array.isArray(o.invoice_ids) && o.invoice_ids.length > 0) {
+          poOrderInvoiceMap[i] = o.invoice_ids;
+          poInvoiceIds.push(...o.invoice_ids);
+        }
+      }
+
+      if (poInvoiceIds.length > 0) {
+        try {
+          const uniqueIds = [...new Set(poInvoiceIds)];
+          const bills = await odoo.read("account.move", uniqueIds, ["id", "payment_state"]);
+          const billPaymentMap: Record<number, string> = {};
+          for (const b of bills) {
+            billPaymentMap[b.id] = b.payment_state || "not_paid";
+          }
+
+          for (let i = 0; i < poOrders.length; i++) {
+            const invIds = poOrderInvoiceMap[i];
+            if (!invIds || invIds.length === 0) continue;
+            const allPaid = invIds.every(
+              (id: number) => billPaymentMap[id] === "paid" || billPaymentMap[id] === "in_payment"
+            );
+            if (allPaid) poPaid++;
+          }
+        } catch (e: any) {
+          log(`Warning: could not fetch PO bill payment states: ${e.message}`, "odoo");
+        }
+      }
+
+      res.json({
+        so: {
+          total: soTotal,
+          salesOrder: soSalesOrder,
+          delivery: soDelivery,
+          invoiced: soInvoiced,
+          paid: soPaid,
+        },
+        po: {
+          total: poTotal,
+          purchaseOrder: poPurchaseOrder,
+          receipt: poReceipt,
+          billed: poBilled,
+          paid: poPaid,
+        },
+      });
+    } catch (err: any) {
+      log(`Error fetching pipeline stats: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   return httpServer;
 }
