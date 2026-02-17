@@ -12,10 +12,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Users, ShoppingCart, FileText, Building2, ArrowLeft, ChevronRightIcon,
-  DollarSign, Package, Receipt, TrendingUp, ChevronDown, ChevronUp,
+  DollarSign, Package, Receipt, TrendingUp, ChevronDown, ChevronUp, Filter,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
@@ -369,8 +371,11 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
   const [jumpInput, setJumpInput] = useState("");
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [selectedSubAccount, setSelectedSubAccount] = useState<string>("all");
+  const [subAccountOpen, setSubAccountOpen] = useState(false);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, pageSize]);
+  useEffect(() => { setShowAllOrders(false); setShowAllProducts(false); }, [selectedSubAccount]);
 
   const { data: parent, isLoading: parentLoading } = useQuery<OdooPartner>({
     queryKey: ["/api/odoo/partners", customerId],
@@ -381,10 +386,26 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
     },
   });
 
-  const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery<DashboardData>({
-    queryKey: ["/api/odoo/partners", customerId, "dashboard"],
+  const { data: allChildren } = useQuery<{ records: { id: number; name: string }[]; total: number }>({
+    queryKey: ["/api/odoo/partners", "allChildren", customerId],
     queryFn: async () => {
-      const res = await fetch(`/api/odoo/partners/${customerId}/dashboard`);
+      const params = new URLSearchParams();
+      params.set("limit", "10000");
+      params.set("offset", "0");
+      params.set("parentId", String(customerId));
+      params.set("type", "customer");
+      const res = await fetch(`/api/odoo/partners?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch children");
+      return res.json();
+    },
+  });
+
+  const dashboardPartnerId = selectedSubAccount === "all" ? customerId : parseInt(selectedSubAccount);
+
+  const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery<DashboardData>({
+    queryKey: ["/api/odoo/partners", dashboardPartnerId, "dashboard"],
+    queryFn: async () => {
+      const res = await fetch(`/api/odoo/partners/${dashboardPartnerId}/dashboard`);
       if (!res.ok) throw new Error("Failed to fetch dashboard");
       return res.json();
     },
@@ -466,6 +487,71 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
             </div>
           </CardHeader>
         </Card>
+      )}
+
+      {allChildren && allChildren.total > 0 && (
+        <div className="flex items-center gap-2 flex-wrap" data-testid="section-sub-account-filter">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">View data for:</span>
+          <Popover open={subAccountOpen} onOpenChange={setSubAccountOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={subAccountOpen}
+                className="min-w-[220px] justify-between"
+                data-testid="button-sub-account-filter"
+              >
+                <span className="truncate">
+                  {selectedSubAccount === "all"
+                    ? `All accounts (${allChildren.total + 1})`
+                    : selectedSubAccount === String(customerId)
+                      ? `${parent?.name || "Parent"} (parent only)`
+                      : allChildren.records.find(c => String(c.id) === selectedSubAccount)?.name || "Selected account"}
+                </span>
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search sub-accounts..." data-testid="input-sub-account-search" />
+                <CommandList>
+                  <CommandEmpty>No sub-account found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="all accounts combined"
+                      onSelect={() => { setSelectedSubAccount("all"); setSubAccountOpen(false); }}
+                      data-testid="option-sub-account-all"
+                    >
+                      All accounts ({allChildren.total + 1})
+                    </CommandItem>
+                    {allChildren.records.map((child) => (
+                      <CommandItem
+                        key={child.id}
+                        value={child.name}
+                        onSelect={() => { setSelectedSubAccount(String(child.id)); setSubAccountOpen(false); }}
+                        data-testid={`option-sub-account-${child.id}`}
+                      >
+                        {child.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {selectedSubAccount !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedSubAccount("all")}
+              data-testid="button-clear-filter"
+            >
+              Clear filter
+            </Button>
+          )}
+          {dashboardLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+        </div>
       )}
 
       {dashboardLoading ? (
