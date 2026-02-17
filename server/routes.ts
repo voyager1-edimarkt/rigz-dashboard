@@ -1464,6 +1464,8 @@ app.get("/api/odoo/kpis", async (req, res) => {
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
       const search = (req.query.search as string) || "";
       const type = (req.query.type as string) || "";
+      const parentOnly = req.query.parentOnly === "true";
+      const parentId = req.query.parentId ? parseInt(req.query.parentId as string) : null;
 
       const filters: any[] = [];
       if (search) {
@@ -1477,10 +1479,46 @@ app.get("/api/odoo/kpis", async (req, res) => {
       else if (type === "supplier") filters.push(["supplier_rank", ">", 0]);
       else if (type === "company") filters.push(["is_company", "=", true]);
 
+      if (parentOnly) {
+        filters.push(["parent_id", "=", false]);
+      }
+      if (parentId !== null) {
+        filters.push(["parent_id", "=", parentId]);
+      }
+
       const result = await odoo.getPartners(filters, offset, limit);
       res.json(result);
     } catch (err: any) {
       log(`Error fetching Odoo partners: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/partners/:id", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid partner ID" });
+      const partner = await odoo.getPartnerById(id);
+      if (!partner) return res.status(404).json({ message: "Partner not found" });
+      res.json(partner);
+    } catch (err: any) {
+      log(`Error fetching Odoo partner ${req.params.id}: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/odoo/partners/:id/children", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid partner ID" });
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const result = await odoo.getPartnerChildren(id, offset, limit);
+      res.json(result);
+    } catch (err: any) {
+      log(`Error fetching children for partner ${req.params.id}: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });
     }
   });

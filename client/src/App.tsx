@@ -21,7 +21,8 @@ import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import OdooProducts from "@/pages/odoo-products";
 import OdooVendors from "@/pages/odoo-vendors";
-import SalesFlow, { CustomersTab } from "@/pages/sales-flow";
+import { Users } from "lucide-react";
+import SalesFlow, { CustomersTab, CustomerDetailPage } from "@/pages/sales-flow";
 import PurchaseFlow from "@/pages/purchase-flow";
 import OdooOrderDetail from "@/pages/odoo-order-detail";
 import OdooPODetail from "@/pages/odoo-po-detail";
@@ -170,9 +171,16 @@ function AppContent() {
                 </div>
               </Route>
 
+              <Route path="/sales-flow/customers/:id">
+                {(params: { id: string }) => (
+                  <CustomerDetailPage customerId={Number(params.id)} />
+                )}
+              </Route>
+
               <Route path="/sales-flow/customers">
                 <div className="h-full overflow-auto p-4 space-y-4">
                   <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
                     <span className="text-xl font-semibold">Customers</span>
                   </div>
                   <CustomersTab />

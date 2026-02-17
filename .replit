@@ -48,3 +48,6 @@ MYSQL_DATABASE = "runtime"
 SSH_HOST = "54.161.236.27"
 SSH_USER = "ec2-user"
 SSH_PORT = "22"
+
+[agent]
+expertMode = true

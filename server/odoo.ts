@@ -394,12 +394,39 @@ async getCustomerInvoiceTotals(params?: {
       "name", "email", "phone", "mobile", "street", "street2",
       "city", "state_id", "zip", "country_id", "is_company",
       "customer_rank", "supplier_rank", "active",
+      "parent_id", "child_ids",
       "create_date", "write_date",
     ];
 
     const records = await this.searchRead("res.partner", filters, fields, offset, limit, order);
     const total = await this.searchCount("res.partner", filters);
 
+    return { records, total };
+  }
+
+  async getPartnerById(id: number): Promise<any | null> {
+    const fields = [
+      "name", "email", "phone", "mobile", "street", "street2",
+      "city", "state_id", "zip", "country_id", "is_company",
+      "customer_rank", "supplier_rank", "active",
+      "parent_id", "child_ids",
+      "create_date", "write_date",
+    ];
+    const records = await this.read("res.partner", [id], fields);
+    return records?.[0] || null;
+  }
+
+  async getPartnerChildren(parentId: number, offset = 0, limit = 100, order = "name asc"): Promise<{ records: any[]; total: number }> {
+    const fields = [
+      "name", "email", "phone", "mobile", "street", "street2",
+      "city", "state_id", "zip", "country_id", "is_company",
+      "customer_rank", "supplier_rank", "active",
+      "parent_id", "child_ids",
+      "create_date", "write_date",
+    ];
+    const filters: any[] = [["parent_id", "=", parentId]];
+    const records = await this.searchRead("res.partner", filters, fields, offset, limit, order);
+    const total = await this.searchCount("res.partner", filters);
     return { records, total };
   }
 }

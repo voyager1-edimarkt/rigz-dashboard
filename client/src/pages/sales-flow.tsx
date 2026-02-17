@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Users, ShoppingCart, FileText,
+  Users, ShoppingCart, FileText, Building2, ArrowLeft, ChevronRightIcon,
 } from "lucide-react";
 
 interface OdooPartner {
@@ -30,6 +30,8 @@ interface OdooPartner {
   customer_rank: number;
   supplier_rank: number;
   active: boolean;
+  parent_id: [number, string] | false;
+  child_ids: number[];
 }
 
 interface OdooSaleOrder {
@@ -189,6 +191,7 @@ function LoadingSkeleton() {
 }
 
 export function CustomersTab() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
@@ -202,10 +205,11 @@ export function CustomersTab() {
   queryParams.set("limit", String(pageSize));
   queryParams.set("offset", String(offset));
   queryParams.set("type", "customer");
+  queryParams.set("parentOnly", "true");
   if (debouncedSearch) queryParams.set("search", debouncedSearch);
 
   const { data, isLoading, error, isFetching } = useQuery<{ records: OdooPartner[]; total: number }>({
-    queryKey: ["/api/odoo/partners", "customer", debouncedSearch, offset, pageSize],
+    queryKey: ["/api/odoo/partners", "customer", "parentOnly", debouncedSearch, offset, pageSize],
     queryFn: async () => {
       const res = await fetch(`/api/odoo/partners?${queryParams.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch customers");
@@ -225,7 +229,7 @@ export function CustomersTab() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            {data && <Badge variant="secondary" data-testid="badge-customers-count">{data.total.toLocaleString()} customers</Badge>}
+            {data && <Badge variant="secondary" data-testid="badge-customers-count">{data.total.toLocaleString()} parent accounts</Badge>}
             {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
           </div>
         </div>
@@ -254,28 +258,42 @@ export function CustomersTab() {
                   <TableHead>City</TableHead>
                   <TableHead>State</TableHead>
                   <TableHead>Country</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Sub-accounts</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.records.map((p) => (
-                  <TableRow key={p.id} data-testid={`row-customer-${p.id}`}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {p.name}
-                        {p.is_company && <Badge variant="outline" className="text-xs">Company</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">{p.email || "-"}</TableCell>
-                    <TableCell className="text-sm">{p.phone || p.mobile || "-"}</TableCell>
-                    <TableCell className="text-sm">{p.city || "-"}</TableCell>
-                    <TableCell className="text-sm">{Array.isArray(p.state_id) ? p.state_id[1] : "-"}</TableCell>
-                    <TableCell className="text-sm">{Array.isArray(p.country_id) ? p.country_id[1] : "-"}</TableCell>
-                    <TableCell>
-                      {p.is_company ? <Badge variant="secondary">Company</Badge> : <Badge variant="outline">Individual</Badge>}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {data.records.map((p) => {
+                  const hasChildren = Array.isArray(p.child_ids) && p.child_ids.length > 0;
+                  return (
+                    <TableRow
+                      key={p.id}
+                      data-testid={`row-customer-${p.id}`}
+                      className={hasChildren ? "cursor-pointer hover-elevate" : ""}
+                      onClick={() => hasChildren && navigate(`/sales-flow/customers/${p.id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                          {p.name}
+                          {p.is_company && <Badge variant="outline" className="text-xs">Company</Badge>}
+                          {hasChildren && <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{p.email || "-"}</TableCell>
+                      <TableCell className="text-sm">{p.phone || p.mobile || "-"}</TableCell>
+                      <TableCell className="text-sm">{p.city || "-"}</TableCell>
+                      <TableCell className="text-sm">{Array.isArray(p.state_id) ? p.state_id[1] : "-"}</TableCell>
+                      <TableCell className="text-sm">{Array.isArray(p.country_id) ? p.country_id[1] : "-"}</TableCell>
+                      <TableCell>
+                        {hasChildren ? (
+                          <Badge variant="secondary">{p.child_ids.length}</Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -284,6 +302,174 @@ export function CustomersTab() {
           offset={offset} setPage={setPage} jumpInput={jumpInput} setJumpInput={setJumpInput} handleJump={handleJump} />}
       </CardContent>
     </Card>
+  );
+}
+
+export function CustomerDetailPage({ customerId }: { customerId: number }) {
+  const [, navigate] = useLocation();
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [jumpInput, setJumpInput] = useState("");
+
+  useEffect(() => { setPage(1); }, [debouncedSearch, pageSize]);
+
+  const { data: parent, isLoading: parentLoading } = useQuery<OdooPartner>({
+    queryKey: ["/api/odoo/partners", customerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/odoo/partners/${customerId}`);
+      if (!res.ok) throw new Error("Failed to fetch customer");
+      return res.json();
+    },
+  });
+
+  const offset = (page - 1) * pageSize;
+  const queryParams = new URLSearchParams();
+  queryParams.set("limit", String(pageSize));
+  queryParams.set("offset", String(offset));
+  queryParams.set("parentId", String(customerId));
+  queryParams.set("type", "customer");
+  if (debouncedSearch) queryParams.set("search", debouncedSearch);
+
+  const { data: childrenData, isLoading: childrenLoading, error, isFetching } = useQuery<{ records: OdooPartner[]; total: number }>({
+    queryKey: ["/api/odoo/partners", "children", customerId, debouncedSearch, offset, pageSize],
+    queryFn: async () => {
+      const res = await fetch(`/api/odoo/partners?${queryParams.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch child companies");
+      return res.json();
+    },
+    placeholderData: (prev) => prev,
+  });
+
+  const totalPages = childrenData ? Math.ceil(childrenData.total / pageSize) : 0;
+  const handleJump = useCallback(() => {
+    const p = parseInt(jumpInput);
+    if (p >= 1 && p <= totalPages) { setPage(p); setJumpInput(""); }
+  }, [jumpInput, totalPages]);
+
+  return (
+    <div className="h-full overflow-auto p-4 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/sales-flow/customers")}
+          data-testid="button-back-customers"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <span
+            className="cursor-pointer hover:underline"
+            onClick={() => navigate("/sales-flow/customers")}
+            data-testid="link-breadcrumb-customers"
+          >
+            Customers
+          </span>
+          <ChevronRightIcon className="w-3 h-3" />
+          <span className="font-medium text-foreground" data-testid="text-breadcrumb-current">
+            {parentLoading ? "Loading..." : parent?.name || `Customer #${customerId}`}
+          </span>
+        </div>
+      </div>
+
+      {parent && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Building2 className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <h2 className="text-lg font-semibold" data-testid="text-parent-name">{parent.name}</h2>
+                <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                  {parent.city && <span>{parent.city}</span>}
+                  {Array.isArray(parent.state_id) && <span>{parent.state_id[1]}</span>}
+                  {Array.isArray(parent.country_id) && <span>{parent.country_id[1]}</span>}
+                </div>
+              </div>
+              <div className="ml-auto flex items-center gap-2 flex-wrap">
+                {parent.email && <Badge variant="outline">{parent.email}</Badge>}
+                {parent.phone && <Badge variant="outline">{parent.phone}</Badge>}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Sub-accounts</span>
+              {childrenData && <Badge variant="secondary" data-testid="badge-children-count">{childrenData.total} accounts</Badge>}
+              {isFetching && !childrenLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search sub-accounts..." value={search}
+                onChange={(e) => setSearch(e.target.value)} className="pl-9" data-testid="input-search-children" />
+            </div>
+            <PageSizeSelector pageSize={pageSize} setPageSize={setPageSize} />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {childrenLoading ? <LoadingSkeleton /> : error ? (
+            <div className="p-6 text-center text-destructive">Failed to load sub-accounts.</div>
+          ) : !childrenData?.records.length ? (
+            <div className="p-6 text-center text-muted-foreground">No sub-accounts found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>City</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {childrenData.records.map((c) => {
+                    const hasChildren = Array.isArray(c.child_ids) && c.child_ids.length > 0;
+                    return (
+                      <TableRow
+                        key={c.id}
+                        data-testid={`row-child-${c.id}`}
+                        className={hasChildren ? "cursor-pointer hover-elevate" : ""}
+                        onClick={() => hasChildren && navigate(`/sales-flow/customers/${c.id}`)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {c.name}
+                            {c.is_company && <Badge variant="outline" className="text-xs">Company</Badge>}
+                            {hasChildren && <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{c.email || "-"}</TableCell>
+                        <TableCell className="text-sm">{c.phone || c.mobile || "-"}</TableCell>
+                        <TableCell className="text-sm">{c.city || "-"}</TableCell>
+                        <TableCell className="text-sm">{Array.isArray(c.state_id) ? c.state_id[1] : "-"}</TableCell>
+                        <TableCell className="text-sm">{Array.isArray(c.country_id) ? c.country_id[1] : "-"}</TableCell>
+                        <TableCell>
+                          {c.is_company ? <Badge variant="secondary">Company</Badge> : <Badge variant="outline">Individual</Badge>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {childrenData && <Pagination page={page} totalPages={totalPages} pageSize={pageSize} total={childrenData.total}
+            offset={offset} setPage={setPage} jumpInput={jumpInput} setJumpInput={setJumpInput} handleJump={handleJump} />}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
