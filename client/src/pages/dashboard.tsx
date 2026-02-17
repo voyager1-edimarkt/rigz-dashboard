@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar, TrendingDown, Users, Receipt, Star, UserPlus } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar, TrendingDown, Users, Receipt, Star, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { PurchaseOrderStats, SalesInsights, StaleProduct } from "@shared/schema";
+import type { SalesInsights, StaleProduct } from "@shared/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -14,7 +14,7 @@ import {
   Geographies,
   Geography,
 } from "react-simple-maps";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 const US_TOPO_URL = "/states-10m.json";
 const CA_GEO_URL = "/canada-provinces.json";
@@ -99,15 +99,6 @@ function BarChartTooltip({ active, payload, label }: any) {
   );
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  synced: "#22c55e",
-  toSync: "#eab308",
-  pending: "#f97316",
-  error: "#ef4444",
-  deleted: "#6b7280",
-  completed: "#3b82f6",
-  cancelled: "#a855f7",
-};
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
@@ -138,9 +129,6 @@ export default function Dashboard() {
     queryKey: [orderStatsUrl],
   });
 
-  const { data: poStats, isLoading: poStatsLoading } = useQuery<PurchaseOrderStats>({
-    queryKey: ["/api/purchase-orders/stats"],
-  });
 
 type OdooKpis = {
   totalRevenue: number;
@@ -279,25 +267,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
       }));
   }, [orderStats]);
 
-  const poStatusData = useMemo(() => {
-    if (!poStats?.byStatus) return [];
-    return [...poStats.byStatus].sort((a, b) => b.cnt - a.cnt);
-  }, [poStats]);
-
-  const poVendorData = useMemo(() => {
-    if (!poStats?.byVendor) return [];
-    return [...poStats.byVendor].sort((a, b) => b.cnt - a.cnt).slice(0, 10);
-  }, [poStats]);
-
-  const poLineData = useMemo(() => {
-    if (!poStats?.recentByDay) return [];
-    return [...poStats.recentByDay]
-      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
-      .map((d) => ({
-        date: new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        pos: d.cnt,
-      }));
-  }, [poStats]);
 
 
 
@@ -838,140 +807,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-4">
-        <Card data-testid="card-po-by-status">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm">POs by Status</CardTitle>
-            <Badge variant="outline">{poStatusData.length} statuses</Badge>
-          </CardHeader>
-          <CardContent>
-            {poStatsLoading ? (
-              <Skeleton className="h-[220px] w-full" />
-            ) : poStatusData.length > 0 ? (
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={poStatusData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="status"
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "hsl(var(--border))" }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "hsl(var(--border))" }}
-                    />
-                    <Tooltip content={<BarChartTooltip />} />
-                    <Bar dataKey="cnt" radius={[4, 4, 0, 0]}>
-                      {poStatusData.map((entry) => (
-                        <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#6b7280"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[220px]">
-                <p className="text-sm text-muted-foreground">No status data</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-po-by-vendor">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm">Top Vendors by PO Count</CardTitle>
-            <Badge variant="outline">Top 10</Badge>
-          </CardHeader>
-          <CardContent>
-            {poStatsLoading ? (
-              <Skeleton className="h-[220px] w-full" />
-            ) : poVendorData.length > 0 ? (
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={poVendorData} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      type="number"
-                      allowDecimals={false}
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "hsl(var(--border))" }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="vendor"
-                      width={100}
-                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "hsl(var(--border))" }}
-                    />
-                    <Tooltip content={<BarChartTooltip />} />
-                    <Bar dataKey="cnt" fill="#dc2626" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[220px]">
-                <p className="text-sm text-muted-foreground">No vendor data</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card data-testid="card-po-activity-chart" className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-muted-foreground" />
-            <CardTitle className="text-sm">Recent PO Activity</CardTitle>
-          </div>
-          <Badge variant="outline" data-testid="badge-total-pos">
-            {poStats?.total.toLocaleString() ?? "..."} total
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          {poStatsLoading ? (
-            <Skeleton className="h-[260px] w-full" />
-          ) : poLineData.length > 0 ? (
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={poLineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <Tooltip content={<BarChartTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="pos"
-                    stroke="#1d4ed8"
-                    strokeWidth={2}
-                    dot={{ r: 4, fill: "#1d4ed8", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-                    activeDot={{ r: 6, fill: "#1d4ed8", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-[260px]">
-              <p className="text-sm text-muted-foreground">No PO activity data</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <Card className="mb-4" data-testid="card-revenue-trend">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
