@@ -15,7 +15,7 @@ import {
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Users, ShoppingCart, FileText, Building2, ArrowLeft, ChevronRightIcon,
-  DollarSign, Package, Receipt, TrendingUp,
+  DollarSign, Package, Receipt, TrendingUp, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
@@ -367,6 +367,8 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [jumpInput, setJumpInput] = useState("");
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, pageSize]);
 
@@ -634,58 +636,76 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium">Recent Orders</span>
-                <Badge variant="secondary">{dashboard.recentOrders.length} shown</Badge>
+                <Badge variant="secondary">{dashboard.recentOrders.length} total</Badge>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {dashboard.recentOrders.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No orders found.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table className="table-fixed w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[15%]">Order</TableHead>
-                        <TableHead className="w-[22%]">Customer</TableHead>
-                        <TableHead className="w-[15%]">Date</TableHead>
-                        <TableHead className="w-[14%]">Amount</TableHead>
-                        <TableHead className="w-[14%]">Status</TableHead>
-                        <TableHead className="w-[10%]">Invoice</TableHead>
-                        <TableHead className="w-[10%]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dashboard.recentOrders.map((o) => (
-                        <TableRow
-                          key={o.id}
-                          className="cursor-pointer hover-elevate"
-                          onClick={() => navigate(`/sales-flow/orders/${o.id}`)}
-                          data-testid={`row-order-${o.id}`}
-                        >
-                          <TableCell className="font-medium text-sm">{o.name}</TableCell>
-                          <TableCell className="text-sm truncate" title={o.partner_name}>{o.partner_name}</TableCell>
-                          <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
-                          <TableCell className="text-sm font-medium">{formatCurrency(o.amount_total)}</TableCell>
-                          <TableCell>
-                            <Badge variant={orderStateVariants[o.state] || "outline"}>
-                              {orderStateLabels[o.state] || o.state}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {o.has_invoice ? (
-                              <Badge variant="default">Yes</Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">No</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
-                          </TableCell>
+                <>
+                  <div className="overflow-x-auto">
+                    <Table className="table-fixed w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[15%]">Order</TableHead>
+                          <TableHead className="w-[22%]">Customer</TableHead>
+                          <TableHead className="w-[15%]">Date</TableHead>
+                          <TableHead className="w-[14%]">Amount</TableHead>
+                          <TableHead className="w-[14%]">Status</TableHead>
+                          <TableHead className="w-[10%]">Invoice</TableHead>
+                          <TableHead className="w-[10%]"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {(showAllOrders ? dashboard.recentOrders : dashboard.recentOrders.slice(0, 5)).map((o) => (
+                          <TableRow
+                            key={o.id}
+                            className="cursor-pointer hover-elevate"
+                            onClick={() => navigate(`/sales-flow/orders/${o.id}`)}
+                            data-testid={`row-order-${o.id}`}
+                          >
+                            <TableCell className="font-medium text-sm">{o.name}</TableCell>
+                            <TableCell className="text-sm truncate" title={o.partner_name}>{o.partner_name}</TableCell>
+                            <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
+                            <TableCell className="text-sm font-medium">{formatCurrency(o.amount_total)}</TableCell>
+                            <TableCell>
+                              <Badge variant={orderStateVariants[o.state] || "outline"}>
+                                {orderStateLabels[o.state] || o.state}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {o.has_invoice ? (
+                                <Badge variant="default">Yes</Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {dashboard.recentOrders.length > 5 && (
+                    <div className="flex justify-center py-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllOrders(!showAllOrders)}
+                        data-testid="button-toggle-orders"
+                      >
+                        {showAllOrders ? (
+                          <>Show Less <ChevronUp className="w-4 h-4 ml-1" /></>
+                        ) : (
+                          <>Show More ({dashboard.recentOrders.length - 5} more) <ChevronDown className="w-4 h-4 ml-1" /></>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -696,6 +716,7 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
                 <div className="flex items-center gap-2">
                   <Package className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium">Top Products Detail</span>
+                  <Badge variant="secondary">{dashboard.topProducts.length} total</Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -710,7 +731,7 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dashboard.topProducts.map((p, i) => (
+                      {(showAllProducts ? dashboard.topProducts : dashboard.topProducts.slice(0, 5)).map((p, i) => (
                         <TableRow key={p.id} data-testid={`row-product-${p.id}`}>
                           <TableCell className="text-sm text-muted-foreground">{i + 1}</TableCell>
                           <TableCell className="font-medium text-sm truncate" title={p.name}>{p.name}</TableCell>
@@ -721,6 +742,22 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
                     </TableBody>
                   </Table>
                 </div>
+                {dashboard.topProducts.length > 5 && (
+                  <div className="flex justify-center py-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllProducts(!showAllProducts)}
+                      data-testid="button-toggle-products"
+                    >
+                      {showAllProducts ? (
+                        <>Show Less <ChevronUp className="w-4 h-4 ml-1" /></>
+                      ) : (
+                        <>Show More ({dashboard.topProducts.length - 5} more) <ChevronDown className="w-4 h-4 ml-1" /></>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
