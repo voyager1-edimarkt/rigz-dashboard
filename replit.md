@@ -55,7 +55,8 @@ Preferred communication style: Simple, everyday language.
 | `/purchase-flow` | Purchase Flow | POs & Bills combined with tabs |
 | `/purchase-flow/orders/:id` | PO Detail | Deep-dive Odoo PO view with line items, bills, timeline |
 | `/purchase-flow/bills/:id` | Bill Detail | Deep-dive Odoo bill view with line items, vendor, timeline |
-| `/odoo/vendors` | Vendors | Odoo vendor list |
+| `/odoo/vendors` | Vendors | Odoo vendor list with parent-only filtering and drill-down |
+| `/odoo/vendors/:id` | Vendor Detail | Deep-dive Odoo vendor view with KPIs, POs, bills, top products, sub-contacts |
 | `/odoo/products` | Products | Odoo product catalog |
 | `/customers` | Customers (Legacy) | Legacy MySQL customer list |
 | `/orders` | Orders (Legacy) | Legacy MySQL order list |
