@@ -468,8 +468,7 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
                       {soStages.map((stage, i) => (
                         <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[100px]">
                           <div
-                            className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
-                            onClick={() => navigate("/orders")}
+                            className="flex-1 rounded-md p-3"
                             data-testid={`pipeline-so-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
                           >
                             <div className="flex items-center gap-2 mb-2">
@@ -520,8 +519,7 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
                       {poStages.map((stage, i) => (
                         <div key={stage.label} className="flex items-center gap-1 flex-1 min-w-[100px]">
                           <div
-                            className="flex-1 rounded-md p-3 cursor-pointer hover-elevate"
-                            onClick={() => navigate("/purchase-orders")}
+                            className="flex-1 rounded-md p-3"
                             data-testid={`pipeline-po-${stage.label.toLowerCase().replace(/\s+/g, "-")}`}
                           >
                             <div className="flex items-center gap-2 mb-2">
