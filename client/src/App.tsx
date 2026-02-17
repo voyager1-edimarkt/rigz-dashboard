@@ -20,7 +20,7 @@ import Inventory from "@/pages/inventory";
 import TableView from "@/pages/table-view";
 import QueryRunner from "@/pages/query-runner";
 import OdooProducts from "@/pages/odoo-products";
-import OdooVendors from "@/pages/odoo-vendors";
+import OdooVendors, { VendorDetailPage } from "@/pages/odoo-vendors";
 import { Users } from "lucide-react";
 import SalesFlow, { CustomersTab, CustomerDetailPage } from "@/pages/sales-flow";
 import PurchaseFlow from "@/pages/purchase-flow";
@@ -195,6 +195,12 @@ function AppContent() {
 
               <Route path="/sales-flow">
                 <SalesFlow />
+              </Route>
+
+              <Route path="/odoo/vendors/:id">
+                {(params: { id: string }) => (
+                  <VendorDetailPage vendorId={Number(params.id)} />
+                )}
               </Route>
 
               <Route path="/odoo/vendors">
