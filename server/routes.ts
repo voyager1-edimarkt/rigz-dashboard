@@ -1509,6 +1509,64 @@ app.get("/api/odoo/invoice-aging", async (req, res) => {
   }
 });
 
+app.get("/api/odoo/invoice-aging/:bucket", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const bucket = req.params.bucket;
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+    const search = (req.query.search as string) || "";
+
+    const invoices = await odoo.searchRead(
+      "account.move",
+      [["move_type", "=", "out_invoice"], ["state", "=", "posted"], ["payment_state", "!=", "paid"]],
+      ["name", "partner_id", "invoice_date", "invoice_date_due", "amount_total", "amount_residual", "payment_state", "ref", "invoice_origin"],
+      0, 10000, "invoice_date_due asc"
+    );
+
+    const now = new Date();
+    const filtered = invoices.filter((inv: any) => {
+      const due = inv.invoice_date_due ? new Date(inv.invoice_date_due) : new Date(inv.invoice_date || now);
+      const daysOverdue = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+      if (bucket === "current") return daysOverdue <= 0;
+      if (bucket === "1-30") return daysOverdue > 0 && daysOverdue <= 30;
+      if (bucket === "31-60") return daysOverdue > 30 && daysOverdue <= 60;
+      if (bucket === "60+") return daysOverdue > 60;
+      return false;
+    });
+
+    let results = filtered;
+    if (search) {
+      const s = search.toLowerCase();
+      results = filtered.filter((inv: any) => {
+        const name = (inv.name || "").toLowerCase();
+        const partner = Array.isArray(inv.partner_id) ? inv.partner_id[1].toLowerCase() : "";
+        const origin = (inv.invoice_origin || "").toLowerCase();
+        return name.includes(s) || partner.includes(s) || origin.includes(s);
+      });
+    }
+
+    const total = results.length;
+    const paged = results.slice(offset, offset + limit).map((inv: any) => ({
+      id: inv.id,
+      name: inv.name,
+      partner_name: Array.isArray(inv.partner_id) ? inv.partner_id[1] : "",
+      partner_id: Array.isArray(inv.partner_id) ? inv.partner_id[0] : null,
+      invoice_date: inv.invoice_date,
+      invoice_date_due: inv.invoice_date_due,
+      amount_total: inv.amount_total,
+      amount_residual: inv.amount_residual,
+      payment_state: inv.payment_state,
+      invoice_origin: inv.invoice_origin || "",
+    }));
+
+    res.json({ records: paged, total });
+  } catch (err: any) {
+    log(`Error fetching aging bucket invoices: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.get("/api/odoo/top-products", async (req, res) => {
   try {
     const odoo = getOdooClient();

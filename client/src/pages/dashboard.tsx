@@ -1036,8 +1036,14 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
                 {invoiceAging.buckets.map((b) => {
                   const pct = invoiceAging.totalOutstanding > 0 ? (b.amount / invoiceAging.totalOutstanding) * 100 : 0;
                   const barColor = b.label === "Current" ? "bg-emerald-500" : b.label === "1-30 days" ? "bg-amber-500" : b.label === "31-60 days" ? "bg-orange-500" : "bg-red-500";
+                  const bucketSlug = b.label === "Current" ? "current" : b.label === "1-30 days" ? "1-30" : b.label === "31-60 days" ? "31-60" : "60+";
                   return (
-                    <div key={b.label} data-testid={`aging-bucket-${b.label.replace(/\s+/g, "-")}`}>
+                    <div
+                      key={b.label}
+                      data-testid={`aging-bucket-${b.label.replace(/\s+/g, "-")}`}
+                      className="cursor-pointer rounded-md p-1.5 -mx-1.5 hover-elevate"
+                      onClick={() => b.count > 0 && navigate(`/aging/${bucketSlug}`)}
+                    >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-medium">{b.label}</span>
                         <div className="flex items-center gap-2">

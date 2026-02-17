@@ -27,6 +27,7 @@ import PurchaseFlow from "@/pages/purchase-flow";
 import OdooOrderDetail from "@/pages/odoo-order-detail";
 import OdooPODetail from "@/pages/odoo-po-detail";
 import OdooBillDetail from "@/pages/odoo-bill-detail";
+import AgingDetail from "@/pages/aging-detail";
 import NotFound from "@/pages/not-found";
 
 // function AppContent() {
@@ -258,6 +259,12 @@ function AppContent() {
 
               <Route path="/query">
                 <QueryRunner database={null} />
+              </Route>
+
+              <Route path="/aging/:bucket">
+                {(params: { bucket: string }) => (
+                  <AgingDetail bucket={params.bucket} />
+                )}
               </Route>
 
               <Route component={NotFound} />
