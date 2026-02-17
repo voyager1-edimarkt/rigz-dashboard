@@ -165,6 +165,16 @@ export class OdooClient {
     return this.executeKw(model, "create", [values]);
   }
 
+  async readGroup(
+  model: string,
+  domain: any[] = [],
+  fields: string[] = [],
+  groupby: string[] = [],
+  options: Record<string, any> = {}
+): Promise<any[]> {
+  // Odoo read_group signature: domain, fields, groupby, [options]
+  return this.executeKw(model, "read_group", [domain, fields, groupby], options);
+}
   async write(
     model: string,
     ids: number[],
@@ -261,6 +271,97 @@ export class OdooClient {
 
     return { records, total };
   }
+
+  async getRevenueThisMonth(): Promise<number> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+
+  const domain = [
+    ["move_type", "=", "out_invoice"],
+    ["state", "=", "posted"],
+    ["invoice_date", ">=", startOfMonth],
+  ];
+
+  const rows = await this.readGroup(
+    "account.move",
+    domain,
+    ["amount_total"],
+    [],
+    { lazy: false }
+  );
+
+  return rows?.[0]?.amount_total || 0;
+}
+
+ async getCustomerSalesTotals(params?: {
+  dateFrom?: string; // "2026-01-01"
+  dateTo?: string;   // "2026-01-31"
+  state?: string[];  // default: ["sale","done"]
+  limit?: number;
+}) {
+  const state = params?.state ?? ["sale", "done"];
+
+  const domain: any[] = [["state", "in", state]];
+
+  if (params?.dateFrom) domain.push(["date_order", ">=", params.dateFrom]);
+  if (params?.dateTo) domain.push(["date_order", "<=", params.dateTo]);
+
+  // Fields: partner_id (group), amount_total (sum), __count (auto)
+  const rows = await this.readGroup(
+    "sale.order",
+    domain,
+    ["partner_id", "amount_total"],
+    ["partner_id"],
+    {
+      lazy: false,
+      orderby: "amount_total desc",
+      limit: params?.limit ?? 50,
+    }
+  );
+
+  // rows look like: { partner_id: [id, "Name"], amount_total: 1234.5, __count: 7 }
+  return rows.map((r: any) => ({
+    partner_id: r.partner_id?.[0],
+    partner_name: r.partner_id?.[1],
+    orders_count: r.__count,
+    amount_total: r.amount_total,
+  }));
+}
+
+async getCustomerInvoiceTotals(params?: {
+  dateFrom?: string; // "2026-01-01"
+  dateTo?: string;
+  states?: string[]; // e.g. ["posted"]
+  limit?: number;
+}) {
+  const domain: any[] = [["move_type", "=", "out_invoice"]];
+
+  if (params?.states?.length) domain.push(["state", "in", params.states]);
+  if (params?.dateFrom) domain.push(["invoice_date", ">=", params.dateFrom]);
+  if (params?.dateTo) domain.push(["invoice_date", "<=", params.dateTo]);
+
+  const rows = await this.readGroup(
+    "account.move",
+    domain,
+    ["partner_id", "amount_total", "amount_residual"],
+    ["partner_id"],
+    {
+      lazy: false,
+      orderby: "amount_total desc",
+      limit: params?.limit ?? 50,
+    }
+  );
+
+  return rows.map((r: any) => ({
+    partner_id: r.partner_id?.[0],
+    partner_name: r.partner_id?.[1],
+    invoices_count: r.__count,
+    invoiced_total: r.amount_total,
+    outstanding_total: r.amount_residual, // unpaid/remaining
+  }));
+}
 
   async getBills(
     filters: any[] = [],

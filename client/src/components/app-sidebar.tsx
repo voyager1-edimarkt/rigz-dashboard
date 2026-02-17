@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import rigzLogo from "@assets/image_1771021143162.png";
+import rigzLogo from "@assets/Rigz.jpg";
 import {
   Sidebar,
   SidebarContent,
@@ -109,104 +109,6 @@ export function AppSidebar() {
                 >
                   <Package className="w-4 h-4" />
                   <span>Products</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Legacy Data</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/customers" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/customers")}
-                  data-testid="button-customers"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Customers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/orders" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/orders")}
-                  data-testid="button-orders"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Orders</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/products" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/products")}
-                  data-testid="button-products"
-                >
-                  <Package className="w-4 h-4" />
-                  <span>Products</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/purchase-orders" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/purchase-orders")}
-                  data-testid="button-purchase-orders"
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  <span>Purchase Orders</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/errors" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/errors")}
-                  data-testid="button-errors"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Errors</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/suppliers" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/suppliers")}
-                  data-testid="button-suppliers"
-                >
-                  <Truck className="w-4 h-4" />
-                  <span>Suppliers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/vendors" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/vendors")}
-                  data-testid="button-vendors"
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>Vendors</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/warehouses" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/warehouses")}
-                  data-testid="button-warehouses"
-                >
-                  <Warehouse className="w-4 h-4" />
-                  <span>Warehouses</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className={location === "/inventory" ? "bg-sidebar-accent" : ""}
-                  onClick={() => setLocation("/inventory")}
-                  data-testid="button-inventory"
-                >
-                  <Boxes className="w-4 h-4" />
-                  <span>Inventory</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -28,6 +28,122 @@ import OdooPODetail from "@/pages/odoo-po-detail";
 import OdooBillDetail from "@/pages/odoo-bill-detail";
 import NotFound from "@/pages/not-found";
 
+// function AppContent() {
+//   const style = {
+//     "--sidebar-width": "17rem",
+//     "--sidebar-width-icon": "3rem",
+//   };
+
+//   return (
+//     <Switch>
+//       <Route path="/">
+//         <div className="h-screen w-full">
+//           <Dashboard />
+//         </div>
+//       </Route>
+//       <Route>
+//         <SidebarProvider style={style as React.CSSProperties}>
+//           <div className="flex h-screen w-full">
+//             <AppSidebar />
+//             <div className="flex flex-col flex-1 min-w-0">
+//               <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
+//                 <div className="flex items-center gap-2">
+//                   <SidebarTrigger data-testid="button-sidebar-toggle" />
+//                 </div>
+//               </header>
+//               <main className="flex-1 min-h-0 overflow-hidden">
+//                 <Switch>
+//               <Route path="/sales-flow/customers">
+//                 <div className="h-full overflow-auto p-4 space-y-4">
+//                   <div className="flex items-center gap-2">
+//                     <span className="text-xl font-semibold">Customers</span>
+//                   </div>
+//                   <CustomersTab />
+//                 </div>
+//               </Route>
+//               <Route path="/sales-flow/orders/:id">
+//                 {(params: { id: string }) => (
+//                   <OdooOrderDetail orderId={Number(params.id)} />
+//                 )}
+//               </Route>
+//               <Route path="/sales-flow">
+//                 <SalesFlow />
+//               </Route>
+//               <Route path="/odoo/vendors">
+//                 <OdooVendors />
+//               </Route>
+//               <Route path="/purchase-flow/orders/:id">
+//                 {(params: { id: string }) => (
+//                   <OdooPODetail poId={Number(params.id)} />
+//                 )}
+//               </Route>
+//               <Route path="/purchase-flow/bills/:id">
+//                 {(params: { id: string }) => (
+//                   <OdooBillDetail billId={Number(params.id)} />
+//                 )}
+//               </Route>
+//               <Route path="/purchase-flow">
+//                 <PurchaseFlow />
+//               </Route>
+//               <Route path="/odoo/products">
+//                 <OdooProducts />
+//               </Route>
+//               <Route path="/customers">
+//                 <Customers />
+//               </Route>
+//               <Route path="/orders">
+//                 <Orders />
+//               </Route>
+//               <Route path="/products">
+//                 <Products />
+//               </Route>
+//               <Route path="/purchase-orders">
+//                 <PurchaseOrders />
+//               </Route>
+//               <Route path="/purchase-orders/:id">
+//                 {(params: { id: string }) => (
+//                   <PurchaseOrderDetailPage poId={Number(params.id)} />
+//                 )}
+//               </Route>
+//               <Route path="/errors">
+//                 <Errors />
+//               </Route>
+//               <Route path="/suppliers">
+//                 <Suppliers />
+//               </Route>
+//               <Route path="/vendors">
+//                 <Vendors />
+//               </Route>
+//               <Route path="/warehouses">
+//                 <Warehouses />
+//               </Route>
+//               <Route path="/inventory">
+//                 <Inventory />
+//               </Route>
+//               <Route path="/orders/:id">
+//                 {(params: { id: string }) => (
+//                   <OrderDetailPage orderId={Number(params.id)} />
+//                 )}
+//               </Route>
+//               <Route path="/table/:database/:table">
+//                 {(params: { database: string; table: string }) => (
+//                   <TableView database={params.database} table={params.table} />
+//                 )}
+//               </Route>
+//               <Route path="/query">
+//                 <QueryRunner database={null} />
+//               </Route>
+//                   <Route component={NotFound} />
+//                 </Switch>
+//               </main>
+//             </div>
+//           </div>
+//         </SidebarProvider>
+//       </Route>
+//     </Switch>
+//   );
+// }
+
 function AppContent() {
   const style = {
     "--sidebar-width": "17rem",
@@ -35,24 +151,25 @@ function AppContent() {
   };
 
   return (
-    <Switch>
-      <Route path="/">
-        <div className="h-screen w-full">
-          <Dashboard />
-        </div>
-      </Route>
-      <Route>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1 min-w-0">
-              <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            </div>
+          </header>
+
+          <main className="flex-1 min-h-0 overflow-hidden">
+            <Switch>
+              <Route path="/">
+                <div className="h-full overflow-auto p-4">
+                  <Dashboard />
                 </div>
-              </header>
-              <main className="flex-1 min-h-0 overflow-hidden">
-                <Switch>
+              </Route>
+
               <Route path="/sales-flow/customers">
                 <div className="h-full overflow-auto p-4 space-y-4">
                   <div className="flex items-center gap-2">
@@ -61,86 +178,80 @@ function AppContent() {
                   <CustomersTab />
                 </div>
               </Route>
+
               <Route path="/sales-flow/orders/:id">
                 {(params: { id: string }) => (
                   <OdooOrderDetail orderId={Number(params.id)} />
                 )}
               </Route>
+
               <Route path="/sales-flow">
                 <SalesFlow />
               </Route>
+
               <Route path="/odoo/vendors">
                 <OdooVendors />
               </Route>
+
               <Route path="/purchase-flow/orders/:id">
                 {(params: { id: string }) => (
                   <OdooPODetail poId={Number(params.id)} />
                 )}
               </Route>
+
               <Route path="/purchase-flow/bills/:id">
                 {(params: { id: string }) => (
                   <OdooBillDetail billId={Number(params.id)} />
                 )}
               </Route>
+
               <Route path="/purchase-flow">
                 <PurchaseFlow />
               </Route>
+
               <Route path="/odoo/products">
                 <OdooProducts />
               </Route>
-              <Route path="/customers">
-                <Customers />
-              </Route>
-              <Route path="/orders">
-                <Orders />
-              </Route>
-              <Route path="/products">
-                <Products />
-              </Route>
-              <Route path="/purchase-orders">
-                <PurchaseOrders />
-              </Route>
+
+              <Route path="/customers" component={Customers} />
+              <Route path="/orders" component={Orders} />
+              <Route path="/products" component={Products} />
+              <Route path="/purchase-orders" component={PurchaseOrders} />
+
               <Route path="/purchase-orders/:id">
                 {(params: { id: string }) => (
                   <PurchaseOrderDetailPage poId={Number(params.id)} />
                 )}
               </Route>
-              <Route path="/errors">
-                <Errors />
-              </Route>
-              <Route path="/suppliers">
-                <Suppliers />
-              </Route>
-              <Route path="/vendors">
-                <Vendors />
-              </Route>
-              <Route path="/warehouses">
-                <Warehouses />
-              </Route>
-              <Route path="/inventory">
-                <Inventory />
-              </Route>
+
+              <Route path="/errors" component={Errors} />
+              <Route path="/suppliers" component={Suppliers} />
+              <Route path="/vendors" component={Vendors} />
+              <Route path="/warehouses" component={Warehouses} />
+              <Route path="/inventory" component={Inventory} />
+
               <Route path="/orders/:id">
                 {(params: { id: string }) => (
                   <OrderDetailPage orderId={Number(params.id)} />
                 )}
               </Route>
+
               <Route path="/table/:database/:table">
                 {(params: { database: string; table: string }) => (
                   <TableView database={params.database} table={params.table} />
                 )}
               </Route>
+
               <Route path="/query">
                 <QueryRunner database={null} />
               </Route>
-                  <Route component={NotFound} />
-                </Switch>
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
-      </Route>
-    </Switch>
+
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 

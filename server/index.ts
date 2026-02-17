@@ -1,3 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+console.log("ENV CHECK", {
+  ODOO_URL: process.env.ODOO_URL,
+  ODOO_DB: process.env.ODOO_DB,
+  ODOO_USER: process.env.ODOO_USER,
+  hasPwd: !!process.env.ODOO_PWD,
+});
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";

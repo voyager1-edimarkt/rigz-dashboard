@@ -111,18 +111,81 @@ export async function registerRoutes(
       res.status(500).json({ message: err.message });
     }
   });
+app.get("/api/odoo/orders/stats", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const dateFrom = (req.query.dateFrom as string) || "";
+    const dateTo = (req.query.dateTo as string) || "";
 
-  app.get("/api/orders/stats", async (req, res) => {
-    try {
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
-      const stats = await storage.getOrderStats(dateFrom, dateTo);
-      res.json(stats);
-    } catch (err: any) {
-      log(`Error fetching order stats: ${err.message}`, "mysql");
-      res.status(500).json({ message: err.message });
+    const domain: any[] = [];
+    if (dateFrom) domain.push(["date_order", ">=", dateFrom]);
+    if (dateTo) domain.push(["date_order", "<=", dateTo]);
+
+    // IMPORTANT: include invoice_status so we can populate "Invoiced"
+    const orders = await odoo.searchRead(
+      "sale.order",
+      domain,
+      ["state", "invoice_status"],
+      0,
+      50000
+    );
+
+    const byStatusMap: Record<string, number> = {};
+
+    const bump = (k: string) => {
+      byStatusMap[k] = (byStatusMap[k] || 0) + 1;
+    };
+
+    for (const o of orders) {
+      const state = o.state || "unknown";
+      const invoiceStatus = o.invoice_status || "no";
+
+      // Cancelled overrides everything
+      if (state === "cancel") {
+        bump("CANCELLED");
+        continue;
+      }
+
+      // Invoice stage (populate your UI's "Invoiced" box)
+      // Odoo invoice_status commonly: 'no' | 'to invoice' | 'invoiced' | 'upselling'
+      if (invoiceStatus === "invoiced") {
+        bump("INVOICE_SENT");
+        continue;
+      }
+
+      // PO Sent stage (your UI expects PO_SENT)
+      // Odoo state 'sent' = quotation sent
+      if (state === "sent") {
+        bump("PO_SENT");
+        continue;
+      }
+
+      // Received stage (draft quotation)
+      if (state === "draft") {
+        bump("PO_RECEIVED");
+        continue;
+      }
+
+      // Fulfillment stage (confirmed sales order)
+      if (state === "sale" || state === "done") {
+        bump("FULFILLMENT_READY");
+        continue;
+      }
+
+      // fallback
+      bump("PO_RECEIVED");
     }
-  });
+
+    res.json({
+      total: orders.length,
+      byStatus: Object.entries(byStatusMap).map(([status, cnt]) => ({ status, cnt })),
+      recentByDay: [],
+    });
+  } catch (err: any) {
+    log(`Error fetching Odoo order stats: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
 
   app.get("/api/orders/:id", async (req, res) => {
     try {
@@ -137,6 +200,44 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/odoo/orders-by-day", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const dateFrom = (req.query.dateFrom as string) || "";
+    const dateTo = (req.query.dateTo as string) || "";
+
+    const domain: any[] = [];
+    if (dateFrom) domain.push(["date_order", ">=", dateFrom]);
+    if (dateTo) domain.push(["date_order", "<=", dateTo]);
+
+    const orders = await odoo.searchRead(
+      "sale.order",
+      domain,
+      ["date_order", "state"],
+      0,
+      50000
+    );
+
+    const byDay: Record<string, number> = {};
+
+    for (const o of orders) {
+      if (o.state === "cancel") continue; // optional: ignore cancelled
+      const day = String(o.date_order || "").split(" ")[0]; // "YYYY-MM-DD"
+      if (!day) continue;
+      byDay[day] = (byDay[day] || 0) + 1;
+    }
+
+    const data = Object.entries(byDay)
+      .map(([day, cnt]) => ({ day, cnt }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    res.json({ data });
+  } catch (err: any) {
+    log(`Error fetching orders-by-day: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
   app.get("/api/orders/:id/history", async (req, res) => {
     try {
       const history = await storage.getOrderHistory(Number(req.params.id));
@@ -146,6 +247,182 @@ export async function registerRoutes(
       res.status(500).json({ message: err.message });
     }
   });
+
+  app.get("/api/odoo/stale-products", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+
+    let recentDays = req.query.recentDays ? Number(req.query.recentDays) : 30;
+    let previousDays = req.query.previousDays ? Number(req.query.previousDays) : 60;
+    if (!Number.isFinite(recentDays) || recentDays < 1) recentDays = 30;
+    if (!Number.isFinite(previousDays) || previousDays < 1) previousDays = 60;
+    if (previousDays <= recentDays) previousDays = recentDays * 2;
+
+    const today = new Date();
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+    const recentFrom = new Date(today);
+    recentFrom.setDate(recentFrom.getDate() - recentDays);
+
+    const prevFrom = new Date(today);
+    prevFrom.setDate(prevFrom.getDate() - previousDays);
+
+    // Previous window ends where recent window starts
+    const prevTo = new Date(recentFrom);
+
+    // 1) Orders in previous window
+    const prevOrders = await odoo.searchRead(
+      "sale.order",
+      [
+        ["state", "!=", "cancel"],
+        ["date_order", ">=", fmt(prevFrom)],
+        ["date_order", "<", fmt(prevTo)],
+      ],
+      ["id", "date_order", "order_line"],
+      0,
+      50000
+    );
+
+    // 2) Orders in recent window
+    const recentOrders = await odoo.searchRead(
+      "sale.order",
+      [
+        ["state", "!=", "cancel"],
+        ["date_order", ">=", fmt(recentFrom)],
+        ["date_order", "<=", fmt(today)],
+      ],
+      ["order_line"],
+      0,
+      50000
+    );
+
+    const recentLineIds = new Set<number>();
+    for (const o of recentOrders) {
+      if (Array.isArray(o.order_line)) o.order_line.forEach((id: number) => recentLineIds.add(id));
+    }
+
+    // Collect previous line IDs + map line->order meta
+    const prevLineIds: number[] = [];
+    const lineToOrderId: Record<number, number> = {};
+    const lineToOrderDay: Record<number, string> = {};
+
+    for (const o of prevOrders) {
+      const day = String(o.date_order || "").split(" ")[0];
+      if (!Array.isArray(o.order_line)) continue;
+      for (const id of o.order_line) {
+        prevLineIds.push(id);
+        lineToOrderId[id] = o.id;
+        lineToOrderDay[id] = day;
+      }
+    }
+
+    if (!prevLineIds.length) return res.json([]);
+
+    // 3) Read previous lines -> aggregate by product
+    const prevLines = await odoo.read("sale.order.line", prevLineIds, [
+      "id",
+      "product_id",
+      "product_uom_qty",
+      "price_unit",
+    ]);
+
+    // Build a set of productIds that appear in recent window (so we can exclude them)
+    const recentProductIds = new Set<number>();
+    if (recentLineIds.size) {
+      const recentLines = await odoo.read("sale.order.line", Array.from(recentLineIds), ["product_id"]);
+      for (const l of recentLines) {
+        const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : null;
+        if (pid) recentProductIds.add(pid);
+      }
+    }
+
+    type Agg = {
+      productId: number;
+      previousQty: number;
+      orderIds: Set<number>;
+      lastOrderDate: string;
+      basePrice: number | null;
+    };
+
+    const agg: Record<number, Agg> = {};
+
+    for (const l of prevLines) {
+      const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : null;
+      if (!pid) continue;
+      if (recentProductIds.has(pid)) continue; // 🔥 dropped logic
+
+      const qty = Number(l.product_uom_qty || 0);
+      const price = l.price_unit != null ? Number(l.price_unit) : null;
+      const oid = lineToOrderId[Number(l.id)];
+      const day = lineToOrderDay[Number(l.id)] || "";
+
+      if (!agg[pid]) {
+        agg[pid] = { productId: pid, previousQty: 0, orderIds: new Set(), lastOrderDate: day, basePrice: price };
+      }
+
+      agg[pid].previousQty += qty;
+      if (oid) agg[pid].orderIds.add(oid);
+      if (day && (!agg[pid].lastOrderDate || day > agg[pid].lastOrderDate)) {
+        agg[pid].lastOrderDate = day;
+        agg[pid].basePrice = price;
+      }
+    }
+
+    const productIds = Object.keys(agg).map(Number);
+    if (!productIds.length) return res.json([]);
+
+    // 4) Read product details for SKU/name
+    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name"]);
+    const pMap: Record<number, { sku: string; name: string }> = {};
+    for (const p of products) {
+      pMap[p.id] = { sku: p.default_code || String(p.id), name: p.name || "" };
+    }
+
+  // Build orderId -> customer name map from prevOrders
+const orderIdToCustomer: Record<number, string> = {};
+for (const o of prevOrders) {
+  const partnerName =
+    o.partner_id && Array.isArray(o.partner_id) && o.partner_id.length > 1
+      ? String(o.partner_id[1])
+      : "";
+  if (partnerName) orderIdToCustomer[o.id] = partnerName;
+}
+
+const out = productIds.map((pid) => {
+  const a = agg[pid];
+  const p = pMap[pid] || { sku: String(pid), name: "" };
+
+  // pick one customer (most recent order customer if possible)
+  let customer: string | null = null;
+  const orderIdsArray = Array.from(a.orderIds);
+
+for (let i = 0; i < orderIdsArray.length; i++) {
+  const oid = orderIdsArray[i];
+  const name = orderIdToCustomer[oid];
+  if (name) {
+    customer = name;
+    break;
+  }
+}
+
+  return {
+    sku: p.sku,
+    name: p.name,
+    vendor: customer, // reuse same field so frontend shows it in "Vendor" column
+    customer: customer,   // debug
+    previousQty: a.previousQty,
+    previousOrders: a.orderIds.size,
+    lastOrderDate: a.lastOrderDate || null,
+    basePrice: a.basePrice,
+  };
+});
+
+    res.json(out);
+  } catch (err: any) {
+    log(`Error fetching Odoo stale products: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
 
   app.get("/api/products", async (req, res) => {
     try {
@@ -397,21 +674,156 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/stale-products", async (req, res) => {
-    try {
-      let recentDays = req.query.recentDays ? Number(req.query.recentDays) : 30;
-      let previousDays = req.query.previousDays ? Number(req.query.previousDays) : 60;
-      if (isNaN(recentDays) || recentDays < 1) recentDays = 30;
-      if (isNaN(previousDays) || previousDays < 1) previousDays = 60;
-      if (recentDays > 365) recentDays = 365;
-      if (previousDays > 365) previousDays = 365;
-      const result = await storage.getStaleProducts(recentDays, previousDays);
-      res.json(result);
-    } catch (err: any) {
-      log(`Error fetching stale products: ${err.message}`, "mysql");
-      res.status(500).json({ message: err.message });
+  app.get("/api/odoo/stale-products", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+
+    let recentDays = req.query.recentDays ? Number(req.query.recentDays) : 30;
+    let previousDays = req.query.previousDays ? Number(req.query.previousDays) : 60;
+    if (!Number.isFinite(recentDays) || recentDays < 1) recentDays = 30;
+    if (!Number.isFinite(previousDays) || previousDays < 1) previousDays = 60;
+    if (previousDays <= recentDays) previousDays = recentDays * 2;
+
+    const today = new Date();
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+    const recentFrom = new Date(today);
+    recentFrom.setDate(recentFrom.getDate() - recentDays);
+
+    const prevFrom = new Date(today);
+    prevFrom.setDate(prevFrom.getDate() - previousDays);
+
+    // Previous window ends where recent window starts
+    const prevTo = new Date(recentFrom);
+
+    // 1) Orders in previous window
+   const prevOrders = await odoo.searchRead(
+  "sale.order",
+  [
+    ["state", "!=", "cancel"],
+    ["date_order", ">=", fmt(prevFrom)],
+    ["date_order", "<", fmt(prevTo)],
+  ],
+  ["id", "name", "date_order", "order_line", "partner_id"],
+  0,
+  50000
+);
+
+    // 2) Orders in recent window
+    const recentOrders = await odoo.searchRead(
+      "sale.order",
+      [
+        ["state", "!=", "cancel"],
+        ["date_order", ">=", fmt(recentFrom)],
+        ["date_order", "<=", fmt(today)],
+      ],
+      ["order_line"],
+      0,
+      50000
+    );
+
+    const recentLineIds = new Set<number>();
+    for (const o of recentOrders) {
+      if (Array.isArray(o.order_line)) o.order_line.forEach((id: number) => recentLineIds.add(id));
     }
-  });
+
+    // Collect previous line IDs + map line->order meta
+    const prevLineIds: number[] = [];
+    const lineToOrderId: Record<number, number> = {};
+    const lineToOrderDay: Record<number, string> = {};
+
+    for (const o of prevOrders) {
+      const day = String(o.date_order || "").split(" ")[0];
+      if (!Array.isArray(o.order_line)) continue;
+      for (const id of o.order_line) {
+        prevLineIds.push(id);
+        lineToOrderId[id] = o.id;
+        lineToOrderDay[id] = day;
+      }
+    }
+
+    if (!prevLineIds.length) return res.json([]);
+
+    // 3) Read previous lines -> aggregate by product
+    const prevLines = await odoo.read("sale.order.line", prevLineIds, [
+      "id",
+      "product_id",
+      "product_uom_qty",
+      "price_unit",
+    ]);
+
+    // Build a set of productIds that appear in recent window (so we can exclude them)
+    const recentProductIds = new Set<number>();
+    if (recentLineIds.size) {
+      const recentLines = await odoo.read("sale.order.line", Array.from(recentLineIds), ["product_id"]);
+      for (const l of recentLines) {
+        const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : null;
+        if (pid) recentProductIds.add(pid);
+      }
+    }
+
+    type Agg = {
+      productId: number;
+      previousQty: number;
+      orderIds: Set<number>;
+      lastOrderDate: string;
+      basePrice: number | null;
+    };
+
+    const agg: Record<number, Agg> = {};
+
+    for (const l of prevLines) {
+      const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : null;
+      if (!pid) continue;
+      if (recentProductIds.has(pid)) continue; // 🔥 dropped logic
+
+      const qty = Number(l.product_uom_qty || 0);
+      const price = l.price_unit != null ? Number(l.price_unit) : null;
+      const oid = lineToOrderId[Number(l.id)];
+      const day = lineToOrderDay[Number(l.id)] || "";
+
+      if (!agg[pid]) {
+        agg[pid] = { productId: pid, previousQty: 0, orderIds: new Set(), lastOrderDate: day, basePrice: price };
+      }
+
+      agg[pid].previousQty += qty;
+      if (oid) agg[pid].orderIds.add(oid);
+      if (day && (!agg[pid].lastOrderDate || day > agg[pid].lastOrderDate)) {
+        agg[pid].lastOrderDate = day;
+        agg[pid].basePrice = price;
+      }
+    }
+
+    const productIds = Object.keys(agg).map(Number);
+    if (!productIds.length) return res.json([]);
+
+    // 4) Read product details for SKU/name
+    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name"]);
+    const pMap: Record<number, { sku: string; name: string }> = {};
+    for (const p of products) {
+      pMap[p.id] = { sku: p.default_code || String(p.id), name: p.name || "" };
+    }
+
+    const out = productIds.map((pid) => {
+      const a = agg[pid];
+      const p = pMap[pid] || { sku: String(pid), name: "" };
+      return {
+        sku: p.sku,
+        name: p.name,
+        vendor: null,
+        previousQty: a.previousQty,
+        previousOrders: a.orderIds.size,
+        lastOrderDate: a.lastOrderDate || null,
+        basePrice: a.basePrice,
+      };
+    });
+
+    res.json(out);
+  } catch (err: any) {
+    log(`Error fetching Odoo stale products: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
 
   app.post("/api/query", async (req, res) => {
     try {
@@ -820,6 +1232,230 @@ export async function registerRoutes(
       res.status(500).json({ message: err.message });
     }
   });
+
+  app.get("/api/odoo/customer-sales", async (req, res) => {
+  const { dateFrom, dateTo, limit } = req.query;
+  const odoo = getOdooClient();
+
+  const data = await odoo.getCustomerSalesTotals({
+    dateFrom: dateFrom as string | undefined,
+    dateTo: dateTo as string | undefined,
+    limit: limit ? Number(limit) : 50,
+  });
+
+  res.json({ data });
+});
+const US_STATE_NAME_TO_ABBR: Record<string, string> = {
+  Alabama: "AL",
+  Alaska: "AK",
+  Arizona: "AZ",
+  Arkansas: "AR",
+  California: "CA",
+  Colorado: "CO",
+  Connecticut: "CT",
+  Delaware: "DE",
+  Florida: "FL",
+  Georgia: "GA",
+  Hawaii: "HI",
+  Idaho: "ID",
+  Illinois: "IL",
+  Indiana: "IN",
+  Iowa: "IA",
+  Kansas: "KS",
+  Kentucky: "KY",
+  Louisiana: "LA",
+  Maine: "ME",
+  Maryland: "MD",
+  Massachusetts: "MA",
+  Michigan: "MI",
+  Minnesota: "MN",
+  Mississippi: "MS",
+  Missouri: "MO",
+  Montana: "MT",
+  Nebraska: "NE",
+  Nevada: "NV",
+  "New Hampshire": "NH",
+  "New Jersey": "NJ",
+  "New Mexico": "NM",
+  "New York": "NY",
+  "North Carolina": "NC",
+  "North Dakota": "ND",
+  Ohio: "OH",
+  Oklahoma: "OK",
+  Oregon: "OR",
+  Pennsylvania: "PA",
+  "Rhode Island": "RI",
+  "South Carolina": "SC",
+  "South Dakota": "SD",
+  Tennessee: "TN",
+  Texas: "TX",
+  Utah: "UT",
+  Vermont: "VT",
+  Virginia: "VA",
+  Washington: "WA",
+  "West Virginia": "WV",
+  Wisconsin: "WI",
+  Wyoming: "WY",
+};
+
+const CA_PROVINCE_NAME_TO_ABBR: Record<string, string> = {
+  Alberta: "AB",
+  "British Columbia": "BC",
+  Manitoba: "MB",
+  "New Brunswick": "NB",
+  "Newfoundland and Labrador": "NL",
+  "Northwest Territories": "NT",
+  "Nova Scotia": "NS",
+  Nunavut: "NU",
+  Ontario: "ON",
+  "Prince Edward Island": "PE",
+  Quebec: "QC",
+  Saskatchewan: "SK",
+  Yukon: "YT",
+};
+app.get("/api/odoo/customers/stats", async (_req, res) => {
+  try {
+    const odoo = getOdooClient();
+
+    const partners = await odoo.searchRead(
+      "res.partner",
+      [
+        ["customer_rank", ">", 0],
+        ["active", "=", true]
+      ],
+      ["country_id", "state_id", "parent_id"],
+      0,
+      10000
+    );
+
+    const byCountry: Record<string, number> = {};
+    const byState: Record<string, number> = {};
+    const byProvince: Record<string, number> = {};
+    let parentAccounts = 0;
+
+    for (const p of partners) {
+      // Parent accounts
+      if (!p.parent_id) parentAccounts++;
+
+      // Country
+      if (p.country_id) {
+        const countryName = p.country_id[1];
+        const countryCode =
+          countryName === "United States" ? "US" :
+          countryName === "Canada" ? "CA" :
+          countryName;
+
+        byCountry[countryCode] = (byCountry[countryCode] || 0) + 1;
+      }
+
+      // State / Province
+      if (p.state_id && p.country_id) {
+  const countryName = p.country_id[1];
+  const rawState = p.state_id[1]; // e.g. "Texas (US)"
+  const cleanState = rawState.split(" (")[0]; // "Texas"
+
+  // 🇺🇸 United States
+  if (countryName === "United States") {
+    const stateCode = US_STATE_NAME_TO_ABBR[cleanState];
+    if (stateCode) {
+      byState[stateCode] = (byState[stateCode] || 0) + 1;
+    }
+  }
+
+  // 🇨🇦 Canada
+  if (countryName === "Canada") {
+   const provinceCode = CA_PROVINCE_NAME_TO_ABBR[cleanState];
+
+if (provinceCode) {
+  byProvince[provinceCode] = (byProvince[provinceCode] || 0) + 1;
+}
+  }
+}
+      }
+    
+
+    res.json({
+      total: partners.length,
+      parentAccounts,
+      byCountry: Object.entries(byCountry).map(([country, cnt]) => ({ country, cnt })),
+      byState: Object.entries(byState).map(([state, cnt]) => ({ state, cnt })),
+      byProvince: Object.entries(byProvince).map(([province, cnt]) => ({ province, cnt })),
+    });
+
+  } catch (err: any) {
+    log(`Error fetching Odoo customer stats: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/revenue-this-month", async (req, res) => {
+  const odoo = getOdooClient();
+  const revenue = await odoo.getRevenueThisMonth();
+  res.json({ revenue });
+});
+
+app.get("/api/odoo/kpis", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const dateFrom = (req.query.dateFrom as string) || "";
+    const dateTo = (req.query.dateTo as string) || "";
+
+    // domain for sale orders
+    const domain: any[] = [];
+    if (dateFrom) domain.push(["date_order", ">=", dateFrom]);
+    if (dateTo) domain.push(["date_order", "<=", dateTo]);
+
+    // Pull minimal fields
+    const orders = await odoo.searchRead(
+      "sale.order",
+      domain,
+      ["amount_total", "order_line", "state"],
+      0,
+      50000
+    );
+
+    // Revenue + orders with sales (ignore cancelled)
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    const orderLineIds: number[] = [];
+
+    for (const o of orders) {
+      if (o.state === "cancel") continue;
+      totalOrders++;
+      totalRevenue += Number(o.amount_total || 0);
+      if (Array.isArray(o.order_line)) orderLineIds.push(...o.order_line);
+    }
+
+    // Units sold + unique SKUs
+    let totalUnits = 0;
+    const skuSet = new Set<string>();
+
+    if (orderLineIds.length) {
+      const lines = await odoo.read("sale.order.line", orderLineIds, [
+        "product_uom_qty",
+        "product_id",
+      ]);
+
+      for (const l of lines) {
+        totalUnits += Number(l.product_uom_qty || 0);
+        // product_id is [id, name] in Odoo
+        const pid = Array.isArray(l.product_id) ? String(l.product_id[0]) : "";
+        if (pid) skuSet.add(pid);
+      }
+    }
+
+    res.json({
+      totalRevenue,
+      totalOrders,
+      totalUnits,
+      uniqueSkus: skuSet.size,
+    });
+  } catch (err: any) {
+    log(`Error fetching Odoo KPIs: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
   app.get("/api/odoo/partners", async (req, res) => {
     try {
