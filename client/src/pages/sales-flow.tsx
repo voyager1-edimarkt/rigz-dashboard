@@ -249,16 +249,16 @@ export function CustomersTab() {
           <div className="p-6 text-center text-muted-foreground">No customers found.</div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>State</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Sub-accounts</TableHead>
+                  <TableHead className="w-[18%]">Name</TableHead>
+                  <TableHead className="w-[20%]">Email</TableHead>
+                  <TableHead className="w-[13%]">Phone</TableHead>
+                  <TableHead className="w-[11%]">City</TableHead>
+                  <TableHead className="w-[12%]">State</TableHead>
+                  <TableHead className="w-[12%]">Country</TableHead>
+                  <TableHead className="w-[14%]">Sub-accounts</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -274,16 +274,16 @@ export function CustomersTab() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-                          {p.name}
-                          {p.is_company && <Badge variant="outline" className="text-xs">Company</Badge>}
+                          <span className="truncate">{p.name}</span>
+                          {p.is_company && <Badge variant="outline" className="text-xs shrink-0">Company</Badge>}
                           {hasChildren && <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{p.email || "-"}</TableCell>
-                      <TableCell className="text-sm">{p.phone || p.mobile || "-"}</TableCell>
-                      <TableCell className="text-sm">{p.city || "-"}</TableCell>
-                      <TableCell className="text-sm">{Array.isArray(p.state_id) ? p.state_id[1] : "-"}</TableCell>
-                      <TableCell className="text-sm">{Array.isArray(p.country_id) ? p.country_id[1] : "-"}</TableCell>
+                      <TableCell className="text-sm truncate" title={p.email || ""}>{p.email || "-"}</TableCell>
+                      <TableCell className="text-sm truncate">{p.phone || p.mobile || "-"}</TableCell>
+                      <TableCell className="text-sm truncate">{p.city || "-"}</TableCell>
+                      <TableCell className="text-sm truncate">{Array.isArray(p.state_id) ? p.state_id[1] : "-"}</TableCell>
+                      <TableCell className="text-sm truncate">{Array.isArray(p.country_id) ? p.country_id[1] : "-"}</TableCell>
                       <TableCell>
                         {hasChildren ? (
                           <Badge variant="secondary">{p.child_ids.length}</Badge>
@@ -421,16 +421,16 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
             <div className="p-6 text-center text-muted-foreground">No sub-accounts found.</div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>City</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead className="w-[15%]">Name</TableHead>
+                    <TableHead className="w-[22%]">Email</TableHead>
+                    <TableHead className="w-[13%]">Phone</TableHead>
+                    <TableHead className="w-[12%]">City</TableHead>
+                    <TableHead className="w-[13%]">State</TableHead>
+                    <TableHead className="w-[12%]">Country</TableHead>
+                    <TableHead className="w-[13%]">Type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -445,16 +445,16 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
                       >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            {c.name}
-                            {c.is_company && <Badge variant="outline" className="text-xs">Company</Badge>}
+                            <span className="truncate">{c.name}</span>
+                            {c.is_company && <Badge variant="outline" className="text-xs shrink-0">Company</Badge>}
                             {hasChildren && <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{c.email || "-"}</TableCell>
-                        <TableCell className="text-sm">{c.phone || c.mobile || "-"}</TableCell>
-                        <TableCell className="text-sm">{c.city || "-"}</TableCell>
-                        <TableCell className="text-sm">{Array.isArray(c.state_id) ? c.state_id[1] : "-"}</TableCell>
-                        <TableCell className="text-sm">{Array.isArray(c.country_id) ? c.country_id[1] : "-"}</TableCell>
+                        <TableCell className="text-sm truncate" title={c.email || ""}>{c.email || "-"}</TableCell>
+                        <TableCell className="text-sm truncate">{c.phone || c.mobile || "-"}</TableCell>
+                        <TableCell className="text-sm truncate">{c.city || "-"}</TableCell>
+                        <TableCell className="text-sm truncate">{Array.isArray(c.state_id) ? c.state_id[1] : "-"}</TableCell>
+                        <TableCell className="text-sm truncate">{Array.isArray(c.country_id) ? c.country_id[1] : "-"}</TableCell>
                         <TableCell>
                           {c.is_company ? <Badge variant="secondary">Company</Badge> : <Badge variant="outline">Individual</Badge>}
                         </TableCell>
