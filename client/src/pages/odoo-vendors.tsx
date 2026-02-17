@@ -231,15 +231,15 @@ export function VendorsListTab() {
                     <TableRow
                       key={p.id}
                       data-testid={`row-vendor-${p.id}`}
-                      className={hasChildren ? "cursor-pointer hover-elevate" : ""}
-                      onClick={() => hasChildren && navigate(`/odoo/vendors/${p.id}`)}
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => navigate(`/odoo/vendors/${p.id}`)}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
                           <span className="truncate">{p.name}</span>
                           {p.is_company && <Badge variant="outline" className="text-xs shrink-0">Company</Badge>}
-                          {hasChildren && <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />}
+                          <ChevronRightIcon className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
                         </div>
                       </TableCell>
                       <TableCell className="text-sm truncate" title={p.email || ""}>{p.email || "-"}</TableCell>
