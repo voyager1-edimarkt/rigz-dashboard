@@ -1508,6 +1508,135 @@ app.get("/api/odoo/kpis", async (req, res) => {
     }
   });
 
+  app.get("/api/odoo/partners/:id/dashboard", async (req, res) => {
+    try {
+      const odoo = getOdooClient();
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid partner ID" });
+
+      const partner = await odoo.getPartnerById(id);
+      if (!partner) return res.status(404).json({ message: "Partner not found" });
+
+      const childIds: number[] = Array.isArray(partner.child_ids) ? partner.child_ids : [];
+      const allPartnerIds = [id, ...childIds];
+
+      const orderDomain: any[] = [["partner_id", "in", allPartnerIds]];
+      const orders = await odoo.searchRead(
+        "sale.order",
+        orderDomain,
+        ["name", "partner_id", "date_order", "state", "amount_total", "amount_untaxed", "order_line", "invoice_ids"],
+        0,
+        10000,
+        "date_order desc"
+      );
+
+      let totalRevenue = 0;
+      let totalOrders = 0;
+      const allOrderLineIds: number[] = [];
+
+      for (const o of orders) {
+        if (o.state === "cancel") continue;
+        totalOrders++;
+        totalRevenue += Number(o.amount_total || 0);
+        if (Array.isArray(o.order_line)) allOrderLineIds.push(...o.order_line);
+      }
+
+      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      const recentOrders = orders.slice(0, 15).map((o: any) => ({
+        id: o.id,
+        name: o.name,
+        partner_name: Array.isArray(o.partner_id) ? o.partner_id[1] : "",
+        date_order: o.date_order,
+        state: o.state,
+        amount_total: o.amount_total,
+        has_invoice: Array.isArray(o.invoice_ids) && o.invoice_ids.length > 0,
+      }));
+
+      const invoiceDomain: any[] = [
+        ["partner_id", "in", allPartnerIds],
+        ["move_type", "=", "out_invoice"],
+        ["state", "!=", "cancel"],
+      ];
+      const invoices = await odoo.searchRead(
+        "account.move",
+        invoiceDomain,
+        ["name", "state", "payment_state", "amount_total", "amount_residual", "invoice_date"],
+        0,
+        10000
+      );
+
+      let paidAmount = 0;
+      let unpaidAmount = 0;
+      let overdueAmount = 0;
+      let openInvoiceCount = 0;
+      let openInvoiceTotal = 0;
+
+      for (const inv of invoices) {
+        const amt = Number(inv.amount_total || 0);
+        const residual = Number(inv.amount_residual || 0);
+        if (inv.payment_state === "paid" || inv.payment_state === "in_payment") {
+          paidAmount += amt;
+        } else if (inv.payment_state === "not_paid" || inv.payment_state === "partial") {
+          unpaidAmount += residual;
+          openInvoiceCount++;
+          openInvoiceTotal += residual;
+        }
+      }
+
+      let topProducts: { id: number; name: string; totalQty: number; totalRevenue: number }[] = [];
+      if (allOrderLineIds.length > 0) {
+        const batchSize = 500;
+        const allLines: any[] = [];
+        for (let i = 0; i < allOrderLineIds.length; i += batchSize) {
+          const batch = allOrderLineIds.slice(i, i + batchSize);
+          const lines = await odoo.read("sale.order.line", batch, [
+            "product_id", "product_uom_qty", "price_subtotal",
+          ]);
+          allLines.push(...lines);
+        }
+
+        const productMap = new Map<number, { name: string; totalQty: number; totalRevenue: number }>();
+        for (const l of allLines) {
+          if (!Array.isArray(l.product_id)) continue;
+          const pid = l.product_id[0];
+          const pname = l.product_id[1];
+          const existing = productMap.get(pid) || { name: pname, totalQty: 0, totalRevenue: 0 };
+          existing.totalQty += Number(l.product_uom_qty || 0);
+          existing.totalRevenue += Number(l.price_subtotal || 0);
+          productMap.set(pid, existing);
+        }
+
+        topProducts = Array.from(productMap.entries())
+          .map(([id, data]) => ({ id, ...data }))
+          .sort((a, b) => b.totalQty - a.totalQty)
+          .slice(0, 10);
+      }
+
+      res.json({
+        kpis: {
+          totalRevenue,
+          totalOrders,
+          avgOrderValue,
+          openInvoiceCount,
+          openInvoiceTotal,
+        },
+        invoiceBreakdown: {
+          paid: paidAmount,
+          unpaid: unpaidAmount,
+          overdue: overdueAmount,
+          totalInvoices: invoices.length,
+        },
+        recentOrders,
+        topProducts,
+        childCount: childIds.length,
+      });
+    } catch (err: any) {
+      log(`Error fetching dashboard for partner ${req.params.id}: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/odoo/partners/:id/children", async (req, res) => {
     try {
       const odoo = getOdooClient();

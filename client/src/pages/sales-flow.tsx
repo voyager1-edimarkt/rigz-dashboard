@@ -15,7 +15,9 @@ import {
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Users, ShoppingCart, FileText, Building2, ArrowLeft, ChevronRightIcon,
+  DollarSign, Package, Receipt, TrendingUp,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
 interface OdooPartner {
   id: number;
@@ -305,6 +307,59 @@ export function CustomersTab() {
   );
 }
 
+interface DashboardData {
+  kpis: {
+    totalRevenue: number;
+    totalOrders: number;
+    avgOrderValue: number;
+    openInvoiceCount: number;
+    openInvoiceTotal: number;
+  };
+  invoiceBreakdown: {
+    paid: number;
+    unpaid: number;
+    overdue: number;
+    totalInvoices: number;
+  };
+  recentOrders: {
+    id: number;
+    name: string;
+    partner_name: string;
+    date_order: string;
+    state: string;
+    amount_total: number;
+    has_invoice: boolean;
+  }[];
+  topProducts: {
+    id: number;
+    name: string;
+    totalQty: number;
+    totalRevenue: number;
+  }[];
+  childCount: number;
+}
+
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(220 70% 55%)",
+  "hsl(280 65% 55%)",
+  "hsl(340 65% 55%)",
+  "hsl(30 80% 55%)",
+  "hsl(160 60% 45%)",
+];
+
+function formatCurrency(val: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
+}
+
+function formatNumber(val: number) {
+  return new Intl.NumberFormat("en-US").format(val);
+}
+
 export function CustomerDetailPage({ customerId }: { customerId: number }) {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
@@ -320,6 +375,15 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
     queryFn: async () => {
       const res = await fetch(`/api/odoo/partners/${customerId}`);
       if (!res.ok) throw new Error("Failed to fetch customer");
+      return res.json();
+    },
+  });
+
+  const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery<DashboardData>({
+    queryKey: ["/api/odoo/partners", customerId, "dashboard"],
+    queryFn: async () => {
+      const res = await fetch(`/api/odoo/partners/${customerId}/dashboard`);
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
       return res.json();
     },
   });
@@ -347,6 +411,11 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
     const p = parseInt(jumpInput);
     if (p >= 1 && p <= totalPages) { setPage(p); setJumpInput(""); }
   }, [jumpInput, totalPages]);
+
+  const invoiceChartData = dashboard ? [
+    { name: "Paid", value: dashboard.invoiceBreakdown.paid },
+    { name: "Unpaid", value: dashboard.invoiceBreakdown.unpaid },
+  ].filter(d => d.value > 0) : [];
 
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
@@ -390,16 +459,279 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
               <div className="ml-auto flex items-center gap-2 flex-wrap">
                 {parent.email && <Badge variant="outline">{parent.email}</Badge>}
                 {parent.phone && <Badge variant="outline">{parent.phone}</Badge>}
+                {dashboard && <Badge variant="secondary">{dashboard.childCount} sub-accounts</Badge>}
               </div>
             </div>
           </CardHeader>
         </Card>
       )}
 
+      {dashboardLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+      ) : dashboardError ? (
+        <Card>
+          <CardContent className="p-6 text-center text-destructive" data-testid="text-dashboard-error">
+            Failed to load dashboard data. Please try refreshing the page.
+          </CardContent>
+        </Card>
+      ) : dashboard && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="section-kpi-cards">
+            <Card data-testid="card-kpi-revenue">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Total Revenue</span>
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <p className="text-2xl font-bold mt-1" data-testid="text-kpi-revenue">{formatCurrency(dashboard.kpis.totalRevenue)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Across all accounts</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-kpi-orders">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Total Orders</span>
+                  <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <p className="text-2xl font-bold mt-1" data-testid="text-kpi-orders">{formatNumber(dashboard.kpis.totalOrders)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Excl. cancelled</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-kpi-aov">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Avg Order Value</span>
+                  <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <p className="text-2xl font-bold mt-1" data-testid="text-kpi-aov">{formatCurrency(dashboard.kpis.avgOrderValue)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Per order</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-kpi-invoices">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Open Invoices</span>
+                  <Receipt className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <p className="text-2xl font-bold mt-1" data-testid="text-kpi-open-invoices">{dashboard.kpis.openInvoiceCount}</p>
+                <p className="text-xs text-muted-foreground mt-1" data-testid="text-kpi-outstanding">{formatCurrency(dashboard.kpis.openInvoiceTotal)} outstanding</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card data-testid="card-top-products-chart">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">Most Ordered Products</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {dashboard.topProducts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No product data available.</p>
+                ) : (
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dashboard.topProducts.slice(0, 8)}
+                        layout="vertical"
+                        margin={{ top: 0, right: 10, bottom: 0, left: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" tickFormatter={(v) => formatNumber(v)} />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={140}
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v: string) => v.length > 22 ? v.slice(0, 20) + "..." : v}
+                        />
+                        <Tooltip
+                          formatter={(value: number, name: string) => [
+                            name === "totalQty" ? `${formatNumber(value)} units` : formatCurrency(value),
+                            name === "totalQty" ? "Qty Ordered" : "Revenue"
+                          ]}
+                          labelFormatter={(label: string) => label}
+                        />
+                        <Bar dataKey="totalQty" name="totalQty" radius={[0, 4, 4, 0]}>
+                          {dashboard.topProducts.slice(0, 8).map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-invoice-breakdown">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">Invoice Breakdown</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {dashboard.invoiceBreakdown.totalInvoices === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No invoices found.</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Paid</span>
+                        <p className="text-xl font-bold" style={{ color: "hsl(var(--chart-2))" }} data-testid="text-invoice-paid">{formatCurrency(dashboard.invoiceBreakdown.paid)}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Unpaid / Outstanding</span>
+                        <p className="text-xl font-bold" style={{ color: "hsl(var(--chart-4))" }} data-testid="text-invoice-unpaid">{formatCurrency(dashboard.invoiceBreakdown.unpaid)}</p>
+                      </div>
+                    </div>
+                    {invoiceChartData.length > 0 && (
+                      <div>
+                        <div className="w-full h-4 rounded-md overflow-hidden flex">
+                          {dashboard.invoiceBreakdown.paid > 0 && (
+                            <div
+                              className="h-full"
+                              style={{ width: `${(dashboard.invoiceBreakdown.paid / (dashboard.invoiceBreakdown.paid + dashboard.invoiceBreakdown.unpaid)) * 100}%`, backgroundColor: "hsl(var(--chart-2))" }}
+                              title={`Paid: ${formatCurrency(dashboard.invoiceBreakdown.paid)}`}
+                              data-testid="bar-invoice-paid"
+                            />
+                          )}
+                          {dashboard.invoiceBreakdown.unpaid > 0 && (
+                            <div
+                              className="h-full"
+                              style={{ width: `${(dashboard.invoiceBreakdown.unpaid / (dashboard.invoiceBreakdown.paid + dashboard.invoiceBreakdown.unpaid)) * 100}%`, backgroundColor: "hsl(var(--chart-4))" }}
+                              title={`Unpaid: ${formatCurrency(dashboard.invoiceBreakdown.unpaid)}`}
+                              data-testid="bar-invoice-unpaid"
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-1" data-testid="legend-invoice-paid">
+                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--chart-2))" }} />
+                            <span>Paid</span>
+                          </div>
+                          <div className="flex items-center gap-1" data-testid="legend-invoice-unpaid">
+                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--chart-4))" }} />
+                            <span>Unpaid</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">{dashboard.invoiceBreakdown.totalInvoices} total invoices</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card data-testid="card-recent-orders">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">Recent Orders</span>
+                <Badge variant="secondary">{dashboard.recentOrders.length} shown</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {dashboard.recentOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No orders found.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="table-fixed w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[15%]">Order</TableHead>
+                        <TableHead className="w-[22%]">Customer</TableHead>
+                        <TableHead className="w-[15%]">Date</TableHead>
+                        <TableHead className="w-[14%]">Amount</TableHead>
+                        <TableHead className="w-[14%]">Status</TableHead>
+                        <TableHead className="w-[10%]">Invoice</TableHead>
+                        <TableHead className="w-[10%]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dashboard.recentOrders.map((o) => (
+                        <TableRow
+                          key={o.id}
+                          className="cursor-pointer hover-elevate"
+                          onClick={() => navigate(`/sales-flow/orders/${o.id}`)}
+                          data-testid={`row-order-${o.id}`}
+                        >
+                          <TableCell className="font-medium text-sm">{o.name}</TableCell>
+                          <TableCell className="text-sm truncate" title={o.partner_name}>{o.partner_name}</TableCell>
+                          <TableCell className="text-sm">{o.date_order ? new Date(o.date_order).toLocaleDateString() : "-"}</TableCell>
+                          <TableCell className="text-sm font-medium">{formatCurrency(o.amount_total)}</TableCell>
+                          <TableCell>
+                            <Badge variant={orderStateVariants[o.state] || "outline"}>
+                              {orderStateLabels[o.state] || o.state}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {o.has_invoice ? (
+                              <Badge variant="default">Yes</Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {dashboard.topProducts.length > 0 && (
+            <Card data-testid="card-top-products-detail">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">Top Products Detail</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table className="table-fixed w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[5%]">#</TableHead>
+                        <TableHead className="w-[50%]">Product</TableHead>
+                        <TableHead className="w-[20%]">Units Ordered</TableHead>
+                        <TableHead className="w-[25%]">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dashboard.topProducts.map((p, i) => (
+                        <TableRow key={p.id} data-testid={`row-product-${p.id}`}>
+                          <TableCell className="text-sm text-muted-foreground">{i + 1}</TableCell>
+                          <TableCell className="font-medium text-sm truncate" title={p.name}>{p.name}</TableCell>
+                          <TableCell className="text-sm">{formatNumber(p.totalQty)}</TableCell>
+                          <TableCell className="text-sm font-medium">{formatCurrency(p.totalRevenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium">Sub-accounts</span>
               {childrenData && <Badge variant="secondary" data-testid="badge-children-count">{childrenData.total} accounts</Badge>}
               {isFetching && !childrenLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
