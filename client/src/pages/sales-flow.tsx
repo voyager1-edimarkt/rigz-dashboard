@@ -393,7 +393,6 @@ export function CustomerDetailPage({ customerId }: { customerId: number }) {
       params.set("limit", "10000");
       params.set("offset", "0");
       params.set("parentId", String(customerId));
-      params.set("type", "customer");
       const res = await fetch(`/api/odoo/partners?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch children");
       return res.json();

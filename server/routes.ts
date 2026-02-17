@@ -1678,12 +1678,13 @@ app.get("/api/odoo/aov-trend", async (req, res) => {
   app.get("/api/odoo/partners", async (req, res) => {
     try {
       const odoo = getOdooClient();
-      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), 100);
+      const parentId = req.query.parentId ? parseInt(req.query.parentId as string) : null;
+      const maxLimit = parentId !== null ? 10000 : 100;
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 25, 1), maxLimit);
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
       const search = (req.query.search as string) || "";
       const type = (req.query.type as string) || "";
       const parentOnly = req.query.parentOnly === "true";
-      const parentId = req.query.parentId ? parseInt(req.query.parentId as string) : null;
 
       const filters: any[] = [];
       if (search) {
