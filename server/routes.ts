@@ -371,11 +371,14 @@ app.get("/api/odoo/orders/stats", async (req, res) => {
     const productIds = Object.keys(agg).map(Number);
     if (!productIds.length) return res.json([]);
 
-    // 4) Read product details for SKU/name
-    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name"]);
+    // 4) Read product details for SKU/name/description
+    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name", "description_sale", "description"]);
     const pMap: Record<number, { sku: string; name: string }> = {};
     for (const p of products) {
-      pMap[p.id] = { sku: p.default_code || String(p.id), name: p.name || "" };
+      const sku = p.default_code || String(p.id);
+      const rawName = p.description_sale || p.description || p.name || "";
+      const displayName = String(rawName).replace(/<[^>]*>/g, "").trim();
+      pMap[p.id] = { sku, name: displayName };
     }
 
   // Build orderId -> customer name map from prevOrders
@@ -797,11 +800,14 @@ for (let i = 0; i < orderIdsArray.length; i++) {
     const productIds = Object.keys(agg).map(Number);
     if (!productIds.length) return res.json([]);
 
-    // 4) Read product details for SKU/name
-    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name"]);
+    // 4) Read product details for SKU/name/description
+    const products = await odoo.read("product.product", productIds, ["id", "default_code", "name", "description_sale", "description"]);
     const pMap: Record<number, { sku: string; name: string }> = {};
     for (const p of products) {
-      pMap[p.id] = { sku: p.default_code || String(p.id), name: p.name || "" };
+      const sku = p.default_code || String(p.id);
+      const rawName = p.description_sale || p.description || p.name || "";
+      const displayName = String(rawName).replace(/<[^>]*>/g, "").trim();
+      pMap[p.id] = { sku, name: displayName };
     }
 
     const out = productIds.map((pid) => {
