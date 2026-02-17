@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar, TrendingDown } from "lucide-react";
+import { Globe, LayoutDashboard, ShoppingCart, ClipboardList, Package, DollarSign, TrendingUp, Barcode, ArrowRight, AlertTriangle, FileCheck, Truck, CheckCircle, XCircle, Calendar, TrendingDown, Users, Receipt, Star, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { PurchaseOrderStats, SalesInsights, StaleProduct } from "@shared/schema";
@@ -216,6 +216,32 @@ const ordersByDayChart = useMemo(() => {
   const staleUrl = `/api/odoo/stale-products?recentDays=${staleRecentDays}&previousDays=${stalePreviousDays}`;  const { data: staleProducts, isLoading: staleLoading } = useQuery<StaleProduct[]>({
     queryKey: [staleUrl],
   });
+
+type TopCustomer = { partner_id: number; partner_name: string; orders_count: number; amount_total: number };
+type InvoiceAging = { totalOutstanding: number; totalInvoices: number; buckets: { label: string; amount: number; count: number }[] };
+type TopProduct = { productId: number; productName: string; totalQty: number; totalRevenue: number; orderCount: number };
+type RevenueMonth = { month: string; revenue: number; orderCount: number };
+type NewCustomersRes = { total: number; records: any[] };
+type AovMonth = { month: string; avgOrderValue: number; totalRevenue: number; orderCount: number };
+
+const { data: topCustomers, isLoading: topCustomersLoading } = useQuery<TopCustomer[]>({
+  queryKey: ["/api/odoo/top-customers"],
+});
+const { data: invoiceAging, isLoading: invoiceAgingLoading } = useQuery<InvoiceAging>({
+  queryKey: ["/api/odoo/invoice-aging"],
+});
+const { data: topProducts, isLoading: topProductsLoading } = useQuery<TopProduct[]>({
+  queryKey: ["/api/odoo/top-products"],
+});
+const { data: revenueByMonth, isLoading: revenueByMonthLoading } = useQuery<RevenueMonth[]>({
+  queryKey: ["/api/odoo/revenue-by-month"],
+});
+const { data: newCustomers, isLoading: newCustomersLoading } = useQuery<NewCustomersRes>({
+  queryKey: ["/api/odoo/new-customers"],
+});
+const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
+  queryKey: ["/api/odoo/aov-trend"],
+});
 
   const [hoveredUS, setHoveredUS] = useState<{ abbr: string; cnt: number } | null>(null);
   const [hoveredCA, setHoveredCA] = useState<{ abbr: string; cnt: number } | null>(null);
@@ -946,6 +972,319 @@ const ordersByDayChart = useMemo(() => {
           )}
         </CardContent>
       </Card>
+
+      <Card className="mb-4" data-testid="card-revenue-trend">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Revenue Over Time</CardTitle>
+          </div>
+          <Badge variant="outline">Last 12 months</Badge>
+        </CardHeader>
+        <CardContent>
+          {revenueByMonthLoading ? (
+            <Skeleton className="h-[260px] w-full" />
+          ) : revenueByMonth && revenueByMonth.length > 0 ? (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueByMonth} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }: any) => {
+                      if (!active || !payload?.[0]) return null;
+                      return (
+                        <div className="bg-background border rounded-lg shadow-lg px-3 py-2">
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                          <p className="text-sm font-semibold">${Number(payload[0].value).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                          <p className="text-xs text-muted-foreground">{payload[0].payload.orderCount} orders</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="revenue" fill="#059669" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-muted-foreground">No revenue data available</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4" data-testid="card-aov-trend">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm">Average Order Value Trend</CardTitle>
+          </div>
+          <Badge variant="outline">Last 12 months</Badge>
+        </CardHeader>
+        <CardContent>
+          {aovTrendLoading ? (
+            <Skeleton className="h-[260px] w-full" />
+          ) : aovTrend && aovTrend.length > 0 ? (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={aovTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickFormatter={(v) => `$${v.toFixed(0)}`}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }: any) => {
+                      if (!active || !payload?.[0]) return null;
+                      return (
+                        <div className="bg-background border rounded-lg shadow-lg px-3 py-2">
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                          <p className="text-sm font-semibold">AOV: ${Number(payload[0].value).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                          <p className="text-xs text-muted-foreground">{payload[0].payload.orderCount} orders</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="avgOrderValue"
+                    stroke="#8b5cf6"
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: "#8b5cf6", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                    activeDot={{ r: 6, fill: "#8b5cf6", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[260px]">
+              <p className="text-sm text-muted-foreground">No AOV data available</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <Card data-testid="card-top-customers">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">Top 10 Customers by Revenue</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {topCustomersLoading ? (
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+              </div>
+            ) : topCustomers && topCustomers.length > 0 ? (
+              <div className="max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">Customer</TableHead>
+                      <TableHead className="text-xs text-right">Orders</TableHead>
+                      <TableHead className="text-xs text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topCustomers.map((c, i) => (
+                      <TableRow
+                        key={c.partner_id}
+                        className="cursor-pointer hover-elevate"
+                        onClick={() => navigate(`/sales-flow/customers/${c.partner_id}`)}
+                        data-testid={`row-top-customer-${c.partner_id}`}
+                      >
+                        <TableCell className="text-xs font-medium text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-xs font-medium">{c.partner_name}</TableCell>
+                        <TableCell className="text-xs text-right">{c.orders_count}</TableCell>
+                        <TableCell className="text-xs text-right font-medium">${c.amount_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px]">
+                <p className="text-sm text-muted-foreground">No customer data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-top-products">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">Top 10 Products by Revenue</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {topProductsLoading ? (
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+              </div>
+            ) : topProducts && topProducts.length > 0 ? (
+              <div className="max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs text-right">Qty Sold</TableHead>
+                      <TableHead className="text-xs text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topProducts.map((p, i) => (
+                      <TableRow key={p.productId} data-testid={`row-top-product-${p.productId}`}>
+                        <TableCell className="text-xs font-medium text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="text-xs font-medium truncate max-w-[180px]">{p.productName}</TableCell>
+                        <TableCell className="text-xs text-right">{p.totalQty.toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-right font-medium">${p.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px]">
+                <p className="text-sm text-muted-foreground">No product data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <Card data-testid="card-invoice-aging">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">Accounts Receivable Aging</CardTitle>
+            </div>
+            {invoiceAging && (
+              <Badge variant="outline" data-testid="badge-total-outstanding">
+                ${invoiceAging.totalOutstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })} outstanding
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {invoiceAgingLoading ? (
+              <Skeleton className="h-[200px] w-full" />
+            ) : invoiceAging ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">{invoiceAging.totalInvoices} unpaid invoices</span>
+                </div>
+                {invoiceAging.buckets.map((b) => {
+                  const pct = invoiceAging.totalOutstanding > 0 ? (b.amount / invoiceAging.totalOutstanding) * 100 : 0;
+                  const barColor = b.label === "Current" ? "bg-emerald-500" : b.label === "1-30 days" ? "bg-amber-500" : b.label === "31-60 days" ? "bg-orange-500" : "bg-red-500";
+                  return (
+                    <div key={b.label} data-testid={`aging-bucket-${b.label.replace(/\s+/g, "-")}`}>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs font-medium">{b.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{b.count} inv</span>
+                          <span className="text-xs font-semibold">${b.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.max(pct, 1)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px]">
+                <p className="text-sm text-muted-foreground">No aging data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-new-customers">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <div className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-muted-foreground" />
+              <CardTitle className="text-sm">New Customers</CardTitle>
+            </div>
+            {newCustomers && (
+              <Badge variant="outline" data-testid="badge-new-customers-count">
+                {newCustomers.total} in last 30 days
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            {newCustomersLoading ? (
+              <div className="p-4 space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+              </div>
+            ) : newCustomers && newCustomers.records.length > 0 ? (
+              <div className="max-h-[300px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Name</TableHead>
+                      <TableHead className="text-xs">Location</TableHead>
+                      <TableHead className="text-xs">Added</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {newCustomers.records.map((c: any) => (
+                      <TableRow
+                        key={c.id}
+                        className="cursor-pointer hover-elevate"
+                        onClick={() => navigate(`/sales-flow/customers/${c.id}`)}
+                        data-testid={`row-new-customer-${c.id}`}
+                      >
+                        <TableCell className="text-xs font-medium">
+                          {c.name}
+                          {c.child_ids?.length > 0 && (
+                            <span className="text-muted-foreground ml-1">({c.child_ids.length} sub)</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {[c.city, Array.isArray(c.state_id) ? c.state_id[1]?.replace(/\s*\(.*\)/, "") : ""].filter(Boolean).join(", ") || "-"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {c.create_date ? new Date(c.create_date).toLocaleDateString() : "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px]">
+                <p className="text-sm text-muted-foreground">No new customers in the last 30 days</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

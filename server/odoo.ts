@@ -34,34 +34,44 @@ export class OdooClient {
     };
   }
 
-  private async jsonRpc(payload: any): Promise<JsonRpcResponse> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+  private async jsonRpc(payload: any, retries = 3): Promise<JsonRpcResponse> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    try {
-      const response = await fetch(this.config.url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch(this.config.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        if (response.status === 429 && attempt < retries) {
+          clearTimeout(timeoutId);
+          const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json() as JsonRpcResponse;
+
+        if (data.error) {
+          throw new Error(
+            `Odoo error: ${data.error.data?.message || data.error.message}`
+          );
+        }
+
+        return data;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      const data = await response.json() as JsonRpcResponse;
-
-      if (data.error) {
-        throw new Error(
-          `Odoo error: ${data.error.data?.message || data.error.message}`
-        );
-      }
-
-      return data;
-    } finally {
-      clearTimeout(timeoutId);
     }
+    throw new Error("Max retries exceeded");
   }
 
   async authenticate(): Promise<number> {

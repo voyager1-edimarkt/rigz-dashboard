@@ -1457,6 +1457,166 @@ app.get("/api/odoo/kpis", async (req, res) => {
 });
 
 
+app.get("/api/odoo/top-customers", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const dateFrom = (req.query.dateFrom as string) || "";
+    const dateTo = (req.query.dateTo as string) || "";
+    const data = await odoo.getCustomerSalesTotals({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, limit });
+    res.json(data);
+  } catch (err: any) {
+    log(`Error fetching top customers: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/invoice-aging", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const invoices = await odoo.searchRead(
+      "account.move",
+      [["move_type", "=", "out_invoice"], ["state", "=", "posted"], ["payment_state", "!=", "paid"]],
+      ["name", "partner_id", "invoice_date", "invoice_date_due", "amount_total", "amount_residual", "payment_state"],
+      0, 5000, "invoice_date_due asc"
+    );
+    const now = new Date();
+    let current = 0, overdue30 = 0, overdue60 = 0, overdue90 = 0;
+    let currentCount = 0, overdue30Count = 0, overdue60Count = 0, overdue90Count = 0;
+    for (const inv of invoices) {
+      const due = inv.invoice_date_due ? new Date(inv.invoice_date_due) : new Date(inv.invoice_date || now);
+      const daysOverdue = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+      const amt = Number(inv.amount_residual || 0);
+      if (daysOverdue <= 0) { current += amt; currentCount++; }
+      else if (daysOverdue <= 30) { overdue30 += amt; overdue30Count++; }
+      else if (daysOverdue <= 60) { overdue60 += amt; overdue60Count++; }
+      else { overdue90 += amt; overdue90Count++; }
+    }
+    const totalOutstanding = current + overdue30 + overdue60 + overdue90;
+    res.json({
+      totalOutstanding,
+      totalInvoices: invoices.length,
+      buckets: [
+        { label: "Current", amount: current, count: currentCount },
+        { label: "1-30 days", amount: overdue30, count: overdue30Count },
+        { label: "31-60 days", amount: overdue60, count: overdue60Count },
+        { label: "60+ days", amount: overdue90, count: overdue90Count },
+      ],
+    });
+  } catch (err: any) {
+    log(`Error fetching invoice aging: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/top-products", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const dateFrom = (req.query.dateFrom as string) || "";
+    const dateTo = (req.query.dateTo as string) || "";
+    const domain: any[] = [["state", "in", ["sale", "done"]]];
+    if (dateFrom) domain.push(["order_id.date_order", ">=", dateFrom]);
+    if (dateTo) domain.push(["order_id.date_order", "<=", dateTo]);
+    const rows = await odoo.readGroup(
+      "sale.order.line",
+      domain,
+      ["product_id", "product_uom_qty", "price_subtotal"],
+      ["product_id"],
+      { lazy: false, orderby: "price_subtotal desc", limit }
+    );
+    const products = rows.map((r: any) => ({
+      productId: r.product_id?.[0],
+      productName: r.product_id?.[1] || "Unknown",
+      totalQty: r.product_uom_qty || 0,
+      totalRevenue: r.price_subtotal || 0,
+      orderCount: r.__count || 0,
+    }));
+    res.json(products);
+  } catch (err: any) {
+    log(`Error fetching top products: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/revenue-by-month", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const months = Math.min(parseInt(req.query.months as string) || 12, 24);
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const cutoffStr = cutoff.toISOString().split("T")[0];
+    const rows = await odoo.readGroup(
+      "sale.order",
+      [["state", "in", ["sale", "done"]], ["date_order", ">=", cutoffStr]],
+      ["date_order", "amount_total"],
+      ["date_order:month"],
+      { lazy: false, orderby: "date_order asc" }
+    );
+    const data = rows.map((r: any) => ({
+      month: r["date_order:month"] || r.date_order || "Unknown",
+      revenue: r.amount_total || 0,
+      orderCount: r.__count || 0,
+    }));
+    res.json(data);
+  } catch (err: any) {
+    log(`Error fetching revenue by month: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/new-customers", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const days = Math.min(parseInt(req.query.days as string) || 30, 90);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString().split("T")[0];
+    const filters: any[] = [
+      ["customer_rank", ">", 0],
+      ["create_date", ">=", cutoffStr],
+      ["parent_id", "=", false],
+    ];
+    const total = await odoo.searchCount("res.partner", filters);
+    const records = await odoo.searchRead(
+      "res.partner", filters,
+      ["name", "email", "city", "state_id", "country_id", "create_date", "child_ids"],
+      0, 10, "create_date desc"
+    );
+    res.json({ total, records });
+  } catch (err: any) {
+    log(`Error fetching new customers: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get("/api/odoo/aov-trend", async (req, res) => {
+  try {
+    const odoo = getOdooClient();
+    const months = Math.min(parseInt(req.query.months as string) || 12, 24);
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const cutoffStr = cutoff.toISOString().split("T")[0];
+    const rows = await odoo.readGroup(
+      "sale.order",
+      [["state", "in", ["sale", "done"]], ["date_order", ">=", cutoffStr]],
+      ["date_order", "amount_total"],
+      ["date_order:month"],
+      { lazy: false, orderby: "date_order asc" }
+    );
+    const data = rows.map((r: any) => ({
+      month: r["date_order:month"] || r.date_order || "Unknown",
+      avgOrderValue: r.__count > 0 ? (r.amount_total || 0) / r.__count : 0,
+      totalRevenue: r.amount_total || 0,
+      orderCount: r.__count || 0,
+    }));
+    res.json(data);
+  } catch (err: any) {
+    log(`Error fetching AOV trend: ${err.message}`, "odoo");
+    res.status(500).json({ message: err.message });
+  }
+});
+
   app.get("/api/odoo/partners", async (req, res) => {
     try {
       const odoo = getOdooClient();
