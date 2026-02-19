@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
-import loginBg from "@assets/image_1771500045944.png";
+import loginBg from "@assets/image_1771500154090.png";
 
 interface LoginPageProps {
   onLogin: () => void;
