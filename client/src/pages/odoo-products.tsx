@@ -11,7 +11,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Package } from "lucide-react";
+import {
+  Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  Package, Warehouse, Lock, CheckCircle2,
+} from "lucide-react";
 
 interface OdooProduct {
   id: number;
@@ -25,6 +28,16 @@ interface OdooProduct {
   active: boolean;
   create_date: string;
   write_date: string;
+  qty_on_hand: number;
+  reserved_qty: number;
+  available_qty: number;
+}
+
+interface InventoryStats {
+  totalProducts: number;
+  totalOnHand: number;
+  totalReserved: number;
+  totalAvailable: number;
 }
 
 function useDebounce(value: string, delay: number) {
@@ -34,6 +47,28 @@ function useDebounce(value: string, delay: number) {
     return () => clearTimeout(t);
   }, [value, delay]);
   return debounced;
+}
+
+function StatCard({ icon: Icon, label, value, accent }: {
+  icon: any; label: string; value: string | number; accent: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`flex items-center justify-center w-9 h-9 rounded-md ${accent} shrink-0`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-lg font-bold mt-0.5">
+              {typeof value === "number" ? value.toLocaleString() : value}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function OdooProducts() {
@@ -53,6 +88,15 @@ export default function OdooProducts() {
   queryParams.set("offset", String(offset));
   if (debouncedSearch) queryParams.set("search", debouncedSearch);
   if (activeFilter !== "all") queryParams.set("active", activeFilter);
+
+  const { data: inventoryStats, isLoading: statsLoading } = useQuery<InventoryStats>({
+    queryKey: ["/api/odoo/products/inventory-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/odoo/products/inventory-stats");
+      if (!res.ok) throw new Error("Failed to fetch inventory stats");
+      return res.json();
+    },
+  });
 
   const { data, isLoading, error, isFetching } = useQuery<{ records: OdooProduct[]; total: number }>({
     queryKey: ["/api/odoo/products", debouncedSearch, activeFilter, offset, pageSize],
@@ -76,7 +120,7 @@ export default function OdooProducts() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Package className="w-5 h-5" />
-          <h1 className="text-xl font-semibold" data-testid="text-page-title">Odoo Products</h1>
+          <h1 className="text-xl font-semibold" data-testid="text-page-title">Products</h1>
           {data && (
             <Badge variant="secondary" data-testid="badge-total-count">
               {data.total.toLocaleString()} total
@@ -86,6 +130,41 @@ export default function OdooProducts() {
             <span className="text-xs text-muted-foreground">Loading...</span>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {statsLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}><CardContent className="p-4"><Skeleton className="h-14 w-full" /></CardContent></Card>
+          ))
+        ) : (
+          <>
+            <StatCard
+              icon={Package}
+              label="Total Products"
+              value={inventoryStats?.totalProducts ?? 0}
+              accent="bg-blue-500/15 text-blue-700 dark:text-blue-400"
+            />
+            <StatCard
+              icon={Warehouse}
+              label="On Hand Qty"
+              value={inventoryStats?.totalOnHand ?? 0}
+              accent="bg-violet-500/15 text-violet-700 dark:text-violet-400"
+            />
+            <StatCard
+              icon={Lock}
+              label="Reserved Qty"
+              value={inventoryStats?.totalReserved ?? 0}
+              accent="bg-amber-500/15 text-amber-700 dark:text-amber-400"
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Available Qty"
+              value={inventoryStats?.totalAvailable ?? 0}
+              accent="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+            />
+          </>
+        )}
       </div>
 
       <Card>
@@ -149,6 +228,9 @@ export default function OdooProducts() {
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Sale Price</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
+                    <TableHead className="text-right">On Hand</TableHead>
+                    <TableHead className="text-right">Reserved</TableHead>
+                    <TableHead className="text-right">Available</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -170,6 +252,25 @@ export default function OdooProducts() {
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         ${p.standard_price.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {p.qty_on_hand}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        <span className={p.reserved_qty > 0 ? "text-amber-600 dark:text-amber-400" : ""}>
+                          {p.reserved_qty}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        <span className={
+                          p.available_qty <= 0
+                            ? "text-red-600 dark:text-red-400 font-semibold"
+                            : p.available_qty < 10
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-emerald-600 dark:text-emerald-400"
+                        }>
+                          {p.available_qty}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs capitalize">

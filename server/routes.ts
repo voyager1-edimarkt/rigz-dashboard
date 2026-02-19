@@ -859,6 +859,36 @@ for (let i = 0; i < orderIdsArray.length; i++) {
     }
   });
 
+  app.get("/api/odoo/products/inventory-stats", async (_req, res) => {
+    try {
+      const odoo = getOdooClient();
+
+      const quants = await odoo.readGroup(
+        "stock.quant",
+        [["location_id.usage", "=", "internal"]],
+        ["quantity", "reserved_quantity"],
+        [],
+        { lazy: false }
+      );
+
+      const totalOnHand = quants?.[0]?.quantity || 0;
+      const totalReserved = quants?.[0]?.reserved_quantity || 0;
+      const totalAvailable = totalOnHand - totalReserved;
+
+      const productCount = await odoo.searchCount("product.product", []);
+
+      res.json({
+        totalProducts: productCount,
+        totalOnHand: Math.round(totalOnHand * 100) / 100,
+        totalReserved: Math.round(totalReserved * 100) / 100,
+        totalAvailable: Math.round(totalAvailable * 100) / 100,
+      });
+    } catch (err: any) {
+      log(`Error fetching inventory stats: ${err.message}`, "odoo");
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/odoo/products", async (req, res) => {
     try {
       const odoo = getOdooClient();
@@ -879,7 +909,72 @@ for (let i = 0; i < orderIdsArray.length; i++) {
       else if (active === "false") filters.push(["active", "=", false]);
 
       const result = await odoo.getProducts(filters, offset, limit);
-      res.json(result);
+
+      const templateIds = result.records.map((r: any) => r.id);
+      let inventoryMap: Record<number, { qty_on_hand: number; reserved_qty: number; available_qty: number }> = {};
+
+      if (templateIds.length > 0) {
+        try {
+          const variants = await odoo.searchRead(
+            "product.product",
+            [["product_tmpl_id", "in", templateIds]],
+            ["id", "product_tmpl_id"],
+            0,
+            5000
+          );
+
+          const variantIds = variants.map((v: any) => v.id);
+          const tmplByVariant: Record<number, number> = {};
+          for (const v of variants) {
+            const tmplId = Array.isArray(v.product_tmpl_id) ? v.product_tmpl_id[0] : v.product_tmpl_id;
+            tmplByVariant[v.id] = tmplId;
+          }
+
+          if (variantIds.length > 0) {
+            const quants = await odoo.searchRead(
+              "stock.quant",
+              [
+                ["product_id", "in", variantIds],
+                ["location_id.usage", "=", "internal"],
+              ],
+              ["product_id", "quantity", "reserved_quantity"],
+              0,
+              50000
+            );
+
+            for (const q of quants) {
+              const productId = Array.isArray(q.product_id) ? q.product_id[0] : q.product_id;
+              const tmplId = tmplByVariant[productId];
+              if (!tmplId) continue;
+
+              if (!inventoryMap[tmplId]) {
+                inventoryMap[tmplId] = { qty_on_hand: 0, reserved_qty: 0, available_qty: 0 };
+              }
+              inventoryMap[tmplId].qty_on_hand += Number(q.quantity || 0);
+              inventoryMap[tmplId].reserved_qty += Number(q.reserved_quantity || 0);
+            }
+
+            for (const tmplId of Object.keys(inventoryMap)) {
+              const inv = inventoryMap[Number(tmplId)];
+              inv.available_qty = inv.qty_on_hand - inv.reserved_qty;
+              inv.qty_on_hand = Math.round(inv.qty_on_hand * 100) / 100;
+              inv.reserved_qty = Math.round(inv.reserved_qty * 100) / 100;
+              inv.available_qty = Math.round(inv.available_qty * 100) / 100;
+            }
+          }
+        } catch (invErr: any) {
+          log(`Warning: Could not fetch inventory for products: ${invErr.message}`, "odoo");
+        }
+      }
+
+      const enrichedRecords = result.records.map((r: any) => ({
+        ...r,
+        qty_on_hand: inventoryMap[r.id]?.qty_on_hand ?? 0,
+        reserved_qty: inventoryMap[r.id]?.reserved_qty ?? 0,
+        available_qty: inventoryMap[r.id]?.available_qty ?? 0,
+      }));
+
+      res.json({ records: enrichedRecords, total: result.total });
     } catch (err: any) {
       log(`Error fetching Odoo products: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });
