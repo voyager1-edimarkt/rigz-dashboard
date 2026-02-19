@@ -241,12 +241,10 @@ export default function OdooProducts() {
                       <TableCell className="font-mono text-xs">
                         {p.default_code || "-"}
                       </TableCell>
-                      <TableCell className="max-w-[300px]">
-                        <div className="font-medium truncate">{p.name}</div>
-                        {p.description && (
-                          <div className="text-xs text-muted-foreground truncate"
-                            dangerouslySetInnerHTML={{ __html: p.description.replace(/<[^>]*>/g, '') }} />
-                        )}
+                      <TableCell className="font-medium max-w-[300px] truncate">
+                        {p.description
+                          ? <span dangerouslySetInnerHTML={{ __html: (p.description as string).replace(/<[^>]*>/g, '') }} />
+                          : p.name}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {Array.isArray(p.categ_id) ? p.categ_id[1] : "-"}
