@@ -1,0 +1,29 @@
+":[1981,"PTC41700"],"partner_invoice_id":[1981,"PTC41700"],"partner_shipping_id":[1981,"PTC41700"],"date_order":"2026-02-05 18:44:43","state":"sale","amount_total":96,"amount_untaxed":96,"amount_tax":0,"order_line":[10818,10819,10820,10821],"picking_ids":[2089],"invoice_ids":[79343],"currency_id":[1,"USD"],"create_date":"2026-02-05 18:44:42","write_date":"2026-02-05 19:45:03","invoices_summary":[{"id":79343,"name":"12477666","state":"posted","payment_state":"not_paid","amount_total":96,"amount_residual":96}]},{"id":1862,"name":"13027600","partner_id":[1948,"PTC37300"],"partner_invoice_id":[1948,"PTC37300"],"partner_shipping_id":[1948,"PTC37300"],"date_order":"2026-02-04 18:15:12","state":"sale","amount_total":244.5,"amount_untaxed":244.5,"amount_tax":0,"order_line":[10778,10779,10780,10781,10782,10783,10784,10785,10786,10787,10788,10789,10790,10791,10792,10793,10794,10795,10796,10797,10798,10799,10800,10801,10802,10803,10804,10805,10806,10807,10808,10809,10810,10811,10812,10813,10814,10815,10816,10908,10909],"picking_ids":[2087],"invoice_ids":[79593],"currency_id":[1,"USD"],"create_date":"2026-02-04 18:15:11","write_date":"2026-02-18 19:31:27","invoices_summary":[{"id":79593,"name":"12477683","state":"posted","payment_state":"not_paid","amount_total":244.5,"amount_residual":244.5}]},{"id":1861,"name":"13020524","partner_id":[2307,"PTC90300"],"partner_invoice_id":[2307,"PTC90300"],"partner_shipping_id":[2307,"PTC90300"],"date_order":"2026-02-02 21:04:39","state":"sale","amount_total":24,"amount_untaxed":24,"amount_tax":0,"order_line":[10770,10771],"picking_ids":[2082],"invoice_ids":[79559],"currency_id":[1,"USD"],"create_date":"2026-02-02 21:04:38","write_date":"2026-02-12 20:11:35","invoices_summary":[{"id":79559,"name":"12477673","state":"posted","payment_state":"not_paid","amount_total":24,"amount_residual":24}]},{"id":1860,"name":"13020258","partner_id":[2190,"PTC69500"],"partner_invoice_id":[2190,"PTC69500"],"partner_shipping_id":[2190,"PTC69500"],"date_order":"2026-02-02 21:04:32","state":"cancel","amount_total":72,"amount_untaxed":72,"amount_tax":0,"order_line":[10769],"picking_ids":[2081],"invoice_ids":[],"currency_id":[1,"USD"],"create_date":"2026-02-02 21:04:31","write_date":"2026-02-12 20:03:35","invoices_summary":[]}],"total":1834}
+0|rigz-das | 2026-02-19 13:02:18 +00:00: 1:02:18 PM [mysql] Error fetching error stats: SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`
+0|rigz-das | 2026-02-19 13:02:18 +00:00: 1:02:18 PM [express] GET /api/errors/stats 500 in 2ms :: {"message":"SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`"}
+0|rigz-das | 2026-02-19 13:02:20 +00:00: 1:02:20 PM [mysql] Error fetching error stats: SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`
+0|rigz-das | 2026-02-19 13:02:20 +00:00: 1:02:20 PM [express] GET /api/errors/stats 500 in 2ms :: {"message":"SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`"}
+0|rigz-das | 2026-02-19 13:02:22 +00:00: 1:02:22 PM [mysql] Error fetching error stats: SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`
+0|rigz-das | 2026-02-19 13:02:22 +00:00: 1:02:22 PM [express] GET /api/errors/stats 500 in 2ms :: {"message":"SELECT command denied to user 'rigz_user'@'localhost' for table `runtime`.`errors`"}
+
+/var/log/rigz-dashboard/error.log last 20 lines:
+0|rigz-das |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|rigz-das |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|rigz-das |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|rigz-das |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|rigz-das |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|rigz-das |     at ModuleLoader.import (node:internal/modules/esm/loader:605:34)
+0|rigz-das |     at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:234:31)
+0|rigz-das |     at importModuleDynamicallyCallback (node:internal/modules/esm/utils:256:12)
+0|rigz-das | You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+0|rigz-das | Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/opt/rigz-dashboard/dist/index.cjs' imported from /usr/lib/node_modules/pm2/lib/ProcessContainer.js
+0|rigz-das |     at finalizeResolution (node:internal/modules/esm/resolve:283:11)
+0|rigz-das |     at moduleResolve (node:internal/modules/esm/resolve:952:10)
+0|rigz-das |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|rigz-das |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|rigz-das |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|rigz-das |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|rigz-das |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|rigz-das |     at ModuleLoader.import (node:internal/modules/esm/loader:605:34)
+0|rigz-das |     at defaultImportModuleDynamicallyForScript (node:internal/modules/esm/utils:234:31)
+0|rigz-das |     at importModuleDynamicallyCallback (node:internal/modules/esm/utils:256:12)
