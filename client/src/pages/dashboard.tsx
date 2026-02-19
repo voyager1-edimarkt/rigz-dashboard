@@ -408,20 +408,10 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
             <CardTitle className="text-sm">Order Pipelines</CardTitle>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Select value={pipelinePreset} onValueChange={setPipelinePreset}>
-              <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-pipeline-date-range">
-                <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="15">Last 15 Days</SelectItem>
-                <SelectItem value="30">Last 30 Days</SelectItem>
-                <SelectItem value="45">Last 45 Days</SelectItem>
-                <SelectItem value="60">Last 60 Days</SelectItem>
-                <SelectItem value="custom">Custom Range</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1 border rounded-md px-3 h-8 text-xs text-muted-foreground">
+              <Calendar className="w-3.5 h-3.5 mr-1" />
+              All Time
+            </div>
             {pipelinePreset === "custom" && (
               <>
                 <Input
