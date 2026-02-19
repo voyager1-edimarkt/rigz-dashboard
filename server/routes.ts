@@ -1697,13 +1697,52 @@ app.get("/api/odoo/top-products", async (req, res) => {
       ["product_id"],
       { lazy: false, orderby: "price_subtotal desc", limit }
     );
-    const products = rows.map((r: any) => ({
-      productId: r.product_id?.[0],
-      productName: r.product_id?.[1] || "Unknown",
-      totalQty: r.product_uom_qty || 0,
-      totalRevenue: r.price_subtotal || 0,
-      orderCount: r.__count || 0,
-    }));
+    const productIds = rows.map((r: any) => r.product_id?.[0]).filter(Boolean);
+    let descriptionMap: Record<number, string> = {};
+    if (productIds.length > 0) {
+      try {
+        const variants = await odoo.searchRead(
+          "product.product",
+          [["id", "in", productIds]],
+          ["id", "product_tmpl_id"],
+          0, 100
+        );
+        const tmplIds = [...new Set(variants.map((v: any) => Array.isArray(v.product_tmpl_id) ? v.product_tmpl_id[0] : v.product_tmpl_id))];
+        if (tmplIds.length > 0) {
+          const templates = await odoo.searchRead(
+            "product.template",
+            [["id", "in", tmplIds]],
+            ["id", "description"],
+            0, 100
+          );
+          const tmplDescMap: Record<number, string> = {};
+          for (const t of templates) {
+            if (t.description) {
+              tmplDescMap[t.id] = (t.description as string).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+            }
+          }
+          for (const v of variants) {
+            const tmplId = Array.isArray(v.product_tmpl_id) ? v.product_tmpl_id[0] : v.product_tmpl_id;
+            if (tmplDescMap[tmplId]) {
+              descriptionMap[v.id] = tmplDescMap[tmplId];
+            }
+          }
+        }
+      } catch (descErr: any) {
+        log(`Warning: Could not fetch product descriptions: ${descErr.message}`, "odoo");
+      }
+    }
+
+    const products = rows.map((r: any) => {
+      const pid = r.product_id?.[0];
+      return {
+        productId: pid,
+        productName: descriptionMap[pid] || r.product_id?.[1] || "Unknown",
+        totalQty: r.product_uom_qty || 0,
+        totalRevenue: r.price_subtotal || 0,
+        orderCount: r.__count || 0,
+      };
+    });
     res.json(products);
   } catch (err: any) {
     log(`Error fetching top products: ${err.message}`, "odoo");
