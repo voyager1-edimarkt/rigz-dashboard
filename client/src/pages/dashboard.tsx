@@ -303,8 +303,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
   <Card
     data-testid="card-total-units-sold"
-    className="cursor-pointer hover-elevate"
-    onClick={() => navigate("/products")}
   >
     <CardContent className="p-4">
       <div className="flex items-center gap-3">
@@ -327,8 +325,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
 
   <Card
     data-testid="card-total-revenue"
-    className="cursor-pointer hover-elevate"
-    onClick={() => navigate("/orders")}
   >
     <CardContent className="p-4">
       <div className="flex items-center gap-3">
@@ -354,8 +350,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
 
   <Card
     data-testid="card-unique-skus"
-    className="cursor-pointer hover-elevate"
-    onClick={() => navigate("/products")}
   >
     <CardContent className="p-4">
       <div className="flex items-center gap-3">
@@ -378,8 +372,6 @@ const { data: aovTrend, isLoading: aovTrendLoading } = useQuery<AovMonth[]>({
 
   <Card
     data-testid="card-orders-with-sales"
-    className="cursor-pointer hover-elevate"
-    onClick={() => navigate("/orders")}
   >
     <CardContent className="p-4">
       <div className="flex items-center gap-3">
