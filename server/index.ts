@@ -7,10 +7,20 @@ console.log("ENV CHECK", {
   hasPwd: !!process.env.ODOO_PWD,
 });
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { MySQLStorage } from "./mysql-storage";
+import { initAuthDB, verifyUser } from "./auth";
+
+declare module "express-session" {
+  interface SessionData {
+    userId: number;
+    username: string;
+  }
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -30,6 +40,63 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+const PgStore = connectPgSimple(session);
+app.use(
+  session({
+    store: new PgStore({ conString: process.env.DATABASE_URL }),
+    secret: process.env.SESSION_SECRET || "rigz-dashboard-secret-key-2026",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    },
+  })
+);
+
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password required" });
+  }
+  const user = await verifyUser(username, password);
+  if (!user) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  res.json({ ok: true, username: user.username });
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ ok: true });
+  });
+});
+
+app.get("/api/me", (req, res) => {
+  if (req.session.userId) {
+    return res.json({ authenticated: true, username: req.session.username });
+  }
+  res.json({ authenticated: false });
+});
+
+app.use("/api", (req, res, next) => {
+  if (
+    req.path === "/login" ||
+    req.path === "/logout" ||
+    req.path === "/me"
+  ) {
+    return next();
+  }
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  next();
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -69,6 +136,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await initAuthDB();
   const storage = new MySQLStorage();
   await registerRoutes(httpServer, app, storage);
 

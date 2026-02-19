@@ -33,10 +33,19 @@ script/           - Build scripts
 attached_assets/  - Uploaded images/assets
 ```
 
+## Authentication
+- Simple session-based login using PostgreSQL (Replit built-in)
+- Tables: `users` (id, username, password hash), `session` (express-session store)
+- Default admin: username `admin`, password `admin123`
+- Auth files: `server/auth.ts` (DB init + verify), login routes in `server/index.ts`
+- Frontend: `client/src/pages/login.tsx`, auth check in `client/src/App.tsx`
+- SQL setup script for MySQL migration: `auth-setup.sql`
+
 ## Environment Variables (via .env file)
 - ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PWD - Odoo API credentials
 - SSH_HOST, SSH_USER, SSH_PRIVATE_KEY - SSH tunnel for MySQL
 - MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE - MySQL credentials
+- DATABASE_URL - PostgreSQL connection (auto-set by Replit for auth)
 
 ## Running
 - Dev: `npm run dev` (serves on port 5000)
@@ -44,4 +53,6 @@ attached_assets/  - Uploaded images/assets
 - Production: `npm run start`
 
 ## Recent Changes
+- 2026-02-19: Added simple login system with PostgreSQL session store, bcryptjs password hashing, protected all API routes
+- 2026-02-19: Made dashboard KPI cards non-clickable (removed hover/navigate)
 - 2026-02-19: Initial setup in Replit environment, added nanoid dependency, set tsconfig target to ES2020
