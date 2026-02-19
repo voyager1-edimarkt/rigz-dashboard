@@ -12,7 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes, LogOut } from "lucide-react";
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
@@ -116,7 +116,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-3 space-y-2">
+        <button
+          onClick={async () => {
+            await fetch("/api/logout", { method: "POST", credentials: "include" });
+            window.location.href = "/";
+          }}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Log Out</span>
+        </button>
         <p className="text-[10px] text-muted-foreground text-center">
           Powered By EDIMarkt Technologies
         </p>
