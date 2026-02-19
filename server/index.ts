@@ -1,19 +1,14 @@
 import dotenv from "dotenv";
 dotenv.config();
-console.log("ENV CHECK", {
-  ODOO_URL: process.env.ODOO_URL,
-  ODOO_DB: process.env.ODOO_DB,
-  ODOO_USER: process.env.ODOO_USER,
-  hasPwd: !!process.env.ODOO_PWD,
-});
+
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { MySQLStorage } from "./mysql-storage";
-import { initAuthDB, verifyUser } from "./auth";
+import { initAuthDB, verifyUser, getAuthPool } from "./auth-mysql";
+import { MySQLSessionStore } from "./mysql-session-store";
 
 declare module "express-session" {
   interface SessionData {
@@ -41,17 +36,16 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-const PgStore = connectPgSimple(session);
 app.use(
   session({
-    store: new PgStore({ conString: process.env.DATABASE_URL }),
+    store: new MySQLSessionStore(getAuthPool()),
     secret: process.env.SESSION_SECRET || "rigz-dashboard-secret-key-2026",
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.SESSION_SECURE === "true",
       sameSite: "lax",
     },
   })
@@ -153,20 +147,8 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+  serveStatic(app);
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {

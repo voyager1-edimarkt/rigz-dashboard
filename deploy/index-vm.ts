@@ -7,7 +7,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { MySQLStorage } from "./mysql-storage";
-import { initAuthDB, verifyUser, getAuthPool } from "./auth-mysql";
+import { initAuthDB, verifyUser, getAuthPool } from "./auth";
 import { MySQLSessionStore } from "./mysql-session-store";
 
 declare module "express-session" {
