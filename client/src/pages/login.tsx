@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
 import loginBg from "@assets/image_1771500154090.png";
-import logo from "@assets/image_1771500186112.png";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -56,8 +55,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     >
       <Card className="w-full max-w-sm backdrop-blur-sm bg-white/90 dark:bg-black/80 shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2">
-            <img src={logo} alt="RIGZ" className="h-12 object-contain" />
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Lock className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-xl">Sign In</CardTitle>
         </CardHeader>
