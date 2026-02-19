@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShoppingCart, Package, ClipboardList, Truck, Building2, Warehouse, AlertTriangle, Boxes } from "lucide-react";
 
@@ -115,6 +116,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-3">
+        <p className="text-[10px] text-muted-foreground text-center">
+          Powered By EDIMarkt Technologies
+        </p>
+      </SidebarFooter>
     </Sidebar>
   );
 }
