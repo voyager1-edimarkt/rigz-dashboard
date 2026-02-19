@@ -90,6 +90,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
+            <p className="text-xs text-center text-muted-foreground mt-3">
+              Powered By EDIMarkt Technologies
+            </p>
           </form>
         </CardContent>
       </Card>
