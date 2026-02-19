@@ -18,7 +18,13 @@ import { Separator } from "@/components/ui/separator";
 import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Package, Warehouse, Lock, CheckCircle2, Calendar, DollarSign, Tag, Box,
+  ScanBarcode, Truck,
 } from "lucide-react";
+
+interface VendorInfo {
+  vendor_name: string;
+  vendor_sku: string;
+}
 
 interface OdooProduct {
   id: number;
@@ -35,6 +41,8 @@ interface OdooProduct {
   qty_on_hand: number;
   reserved_qty: number;
   available_qty: number;
+  barcode: string;
+  vendors: VendorInfo[];
 }
 
 interface InventoryStats {
@@ -142,6 +150,26 @@ function ProductDetailPanel({ product, open, onClose }: {
             <DetailRow icon={Box} label="Reserved %" value={
               `${((product.reserved_qty / product.qty_on_hand) * 100).toFixed(1)}%`
             } />
+          )}
+        </div>
+
+        <div className="mt-6 space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Identification</h3>
+          <Separator />
+          <DetailRow icon={ScanBarcode} label="Barcode" value={product.barcode || "-"} />
+          {product.vendors && product.vendors.length > 0 && (
+            product.vendors.map((v, i) => (
+              <div key={i}>
+                <DetailRow icon={Truck} label={`Vendor ${product.vendors.length > 1 ? i + 1 : ""}`} value={v.vendor_name || "-"} />
+                <DetailRow icon={Tag} label={`Vendor SKU ${product.vendors.length > 1 ? i + 1 : ""}`} value={v.vendor_sku || "-"} />
+              </div>
+            ))
+          )}
+          {(!product.vendors || product.vendors.length === 0) && (
+            <>
+              <DetailRow icon={Truck} label="Vendor" value="-" />
+              <DetailRow icon={Tag} label="Vendor SKU" value="-" />
+            </>
           )}
         </div>
 

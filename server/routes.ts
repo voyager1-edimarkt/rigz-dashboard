@@ -967,11 +967,35 @@ for (let i = 0; i < orderIdsArray.length; i++) {
         }
       }
 
+      let vendorMap: Record<number, { vendor_name: string; vendor_sku: string }[]> = {};
+      try {
+        const allSellerIds = result.records.flatMap((r: any) => r.seller_ids || []);
+        if (allSellerIds.length > 0) {
+          const supplierInfos = await odoo.read(
+            "product.supplierinfo",
+            allSellerIds,
+            ["product_tmpl_id", "partner_id", "product_code"]
+          );
+          for (const si of supplierInfos) {
+            const tmplId = Array.isArray(si.product_tmpl_id) ? si.product_tmpl_id[0] : si.product_tmpl_id;
+            if (!vendorMap[tmplId]) vendorMap[tmplId] = [];
+            vendorMap[tmplId].push({
+              vendor_name: Array.isArray(si.partner_id) ? si.partner_id[1] : String(si.partner_id || ""),
+              vendor_sku: si.product_code || "",
+            });
+          }
+        }
+      } catch (vendorErr: any) {
+        log(`Warning: Could not fetch vendor info: ${vendorErr.message}`, "odoo");
+      }
+
       let enrichedRecords = result.records.map((r: any) => ({
         ...r,
         qty_on_hand: inventoryMap[r.id]?.qty_on_hand ?? 0,
         reserved_qty: inventoryMap[r.id]?.reserved_qty ?? 0,
         available_qty: inventoryMap[r.id]?.available_qty ?? 0,
+        barcode: r.barcode || "",
+        vendors: vendorMap[r.id] || [],
       }));
 
       const stock = req.query.stock as string;

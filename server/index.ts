@@ -4,11 +4,12 @@ dotenv.config();
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
+import { setupVite } from "./vite";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { MySQLStorage } from "./mysql-storage";
-import { initAuthDB, verifyUser, getAuthPool } from "./auth-mysql";
-import { MySQLSessionStore } from "./mysql-session-store";
+import { initAuthDB, verifyUser, getAuthPool } from "./auth";
+import connectPgSimple from "connect-pg-simple";
 
 declare module "express-session" {
   interface SessionData {
@@ -38,7 +39,10 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(
   session({
-    store: new MySQLSessionStore(getAuthPool()),
+    store: new (connectPgSimple(session))({
+      conObject: { connectionString: process.env.DATABASE_URL },
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET || "rigz-dashboard-secret-key-2026",
     resave: false,
     saveUninitialized: false,
@@ -147,7 +151,11 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  serveStatic(app);
+  if (process.env.NODE_ENV === "production") {
+    serveStatic(app);
+  } else {
+    await setupVite(httpServer, app);
+  }
 
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(

@@ -252,7 +252,7 @@ export class OdooClient {
     const fields = [
       "name", "default_code", "description", "list_price",
       "standard_price", "type", "categ_id", "active",
-      "create_date", "write_date",
+      "create_date", "write_date", "barcode", "seller_ids",
     ];
 
     const records = await this.searchRead("product.template", filters, fields, offset, limit, order);
