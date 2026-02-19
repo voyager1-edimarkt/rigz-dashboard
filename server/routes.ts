@@ -967,14 +967,27 @@ for (let i = 0; i < orderIdsArray.length; i++) {
         }
       }
 
-      const enrichedRecords = result.records.map((r: any) => ({
+      let enrichedRecords = result.records.map((r: any) => ({
         ...r,
         qty_on_hand: inventoryMap[r.id]?.qty_on_hand ?? 0,
         reserved_qty: inventoryMap[r.id]?.reserved_qty ?? 0,
         available_qty: inventoryMap[r.id]?.available_qty ?? 0,
       }));
 
-      res.json({ records: enrichedRecords, total: result.total });
+      const stock = req.query.stock as string;
+      if (stock === "in_stock") {
+        enrichedRecords = enrichedRecords.filter((r: any) => r.qty_on_hand > 0);
+      } else if (stock === "out_of_stock") {
+        enrichedRecords = enrichedRecords.filter((r: any) => r.qty_on_hand <= 0);
+      } else if (stock === "low_stock") {
+        enrichedRecords = enrichedRecords.filter((r: any) => r.available_qty > 0 && r.available_qty < 10);
+      } else if (stock === "has_reserved") {
+        enrichedRecords = enrichedRecords.filter((r: any) => r.reserved_qty > 0);
+      } else if (stock === "fully_reserved") {
+        enrichedRecords = enrichedRecords.filter((r: any) => r.qty_on_hand > 0 && r.available_qty <= 0);
+      }
+
+      res.json({ records: enrichedRecords, total: stock && stock !== "all" ? enrichedRecords.length : result.total });
     } catch (err: any) {
       log(`Error fetching Odoo products: ${err.message}`, "odoo");
       res.status(500).json({ message: err.message });

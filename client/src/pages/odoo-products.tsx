@@ -75,11 +75,12 @@ export default function OdooProducts() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [jumpInput, setJumpInput] = useState("");
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, activeFilter, pageSize]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, activeFilter, stockFilter, pageSize]);
 
   const offset = (page - 1) * pageSize;
 
@@ -88,6 +89,7 @@ export default function OdooProducts() {
   queryParams.set("offset", String(offset));
   if (debouncedSearch) queryParams.set("search", debouncedSearch);
   if (activeFilter !== "all") queryParams.set("active", activeFilter);
+  if (stockFilter !== "all") queryParams.set("stock", stockFilter);
 
   const { data: inventoryStats, isLoading: statsLoading } = useQuery<InventoryStats>({
     queryKey: ["/api/odoo/products/inventory-stats"],
@@ -99,7 +101,7 @@ export default function OdooProducts() {
   });
 
   const { data, isLoading, error, isFetching } = useQuery<{ records: OdooProduct[]; total: number }>({
-    queryKey: ["/api/odoo/products", debouncedSearch, activeFilter, offset, pageSize],
+    queryKey: ["/api/odoo/products", debouncedSearch, activeFilter, stockFilter, offset, pageSize],
     queryFn: async () => {
       const res = await fetch(`/api/odoo/products?${queryParams.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch Odoo products");
@@ -180,6 +182,19 @@ export default function OdooProducts() {
                 data-testid="input-search"
               />
             </div>
+            <Select value={stockFilter} onValueChange={setStockFilter}>
+              <SelectTrigger className="w-[160px]" data-testid="select-stock-filter">
+                <SelectValue placeholder="Stock" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stock</SelectItem>
+                <SelectItem value="in_stock">In Stock</SelectItem>
+                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                <SelectItem value="low_stock">Low Stock (&lt;10)</SelectItem>
+                <SelectItem value="has_reserved">Has Reserved</SelectItem>
+                <SelectItem value="fully_reserved">Fully Reserved</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={activeFilter} onValueChange={setActiveFilter}>
               <SelectTrigger className="w-[140px]" data-testid="select-active-filter">
                 <SelectValue placeholder="Status" />
