@@ -605,6 +605,9 @@ for (let i = 0; i < orderIdsArray.length; i++) {
       const stats = await storage.getErrorStats(dateFrom, dateTo);
       res.json(stats);
     } catch (err: any) {
+      if (err.message?.includes("command denied")) {
+        return res.json({ totalErrors: 0, recentErrors: 0, errorsByType: [], errorsByChannel: [] });
+      }
       log(`Error fetching error stats: ${err.message}`, "mysql");
       res.status(500).json({ message: err.message });
     }
@@ -618,6 +621,9 @@ for (let i = 0; i < orderIdsArray.length; i++) {
       }
       res.json(error);
     } catch (err: any) {
+      if (err.message?.includes("command denied")) {
+        return res.status(404).json({ message: "Error tracking not available" });
+      }
       log(`Error fetching error detail: ${err.message}`, "mysql");
       res.status(500).json({ message: err.message });
     }
@@ -636,6 +642,9 @@ for (let i = 0; i < orderIdsArray.length; i++) {
       });
       res.json(result);
     } catch (err: any) {
+      if (err.message?.includes("command denied")) {
+        return res.json({ errors: [], total: 0 });
+      }
       log(`Error fetching errors: ${err.message}`, "mysql");
       res.status(500).json({ message: err.message });
     }
