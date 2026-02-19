@@ -12,8 +12,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import {
   Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Package, Warehouse, Lock, CheckCircle2,
+  Package, Warehouse, Lock, CheckCircle2, Calendar, DollarSign, Tag, Box,
 } from "lucide-react";
 
 interface OdooProduct {
@@ -71,11 +75,102 @@ function StatCard({ icon: Icon, label, value, accent }: {
   );
 }
 
+function DetailRow({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: any }) {
+  return (
+    <div className="flex items-start gap-3 py-2">
+      {Icon && <Icon className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <div className="text-sm font-medium mt-0.5">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function ProductDetailPanel({ product, open, onClose }: {
+  product: OdooProduct | null; open: boolean; onClose: () => void;
+}) {
+  if (!product) return null;
+
+  const displayName = product.description
+    ? (product.description as string).replace(/<[^>]*>/g, '')
+    : product.name;
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{displayName}</SheetTitle>
+          <SheetDescription>
+            {product.default_code ? `SKU: ${product.default_code}` : `ID: ${product.id}`}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Pricing</h3>
+          <Separator />
+          <DetailRow icon={DollarSign} label="Sale Price" value={`$${product.list_price.toFixed(2)}`} />
+          <DetailRow icon={DollarSign} label="Cost" value={`$${product.standard_price.toFixed(2)}`} />
+          {product.list_price > 0 && product.standard_price > 0 && (
+            <DetailRow icon={DollarSign} label="Margin" value={
+              `$${(product.list_price - product.standard_price).toFixed(2)} (${((1 - product.standard_price / product.list_price) * 100).toFixed(1)}%)`
+            } />
+          )}
+        </div>
+
+        <div className="mt-6 space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Inventory</h3>
+          <Separator />
+          <DetailRow icon={Warehouse} label="On Hand" value={product.qty_on_hand.toLocaleString()} />
+          <DetailRow icon={Lock} label="Reserved" value={
+            <span className={product.reserved_qty > 0 ? "text-amber-600 dark:text-amber-400" : ""}>
+              {product.reserved_qty.toLocaleString()}
+            </span>
+          } />
+          <DetailRow icon={CheckCircle2} label="Available" value={
+            <span className={
+              product.available_qty <= 0
+                ? "text-red-600 dark:text-red-400 font-semibold"
+                : product.available_qty < 10
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-emerald-600 dark:text-emerald-400"
+            }>
+              {product.available_qty.toLocaleString()}
+            </span>
+          } />
+          {product.qty_on_hand > 0 && (
+            <DetailRow icon={Box} label="Reserved %" value={
+              `${((product.reserved_qty / product.qty_on_hand) * 100).toFixed(1)}%`
+            } />
+          )}
+        </div>
+
+        <div className="mt-6 space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Details</h3>
+          <Separator />
+          <DetailRow icon={Tag} label="Category" value={Array.isArray(product.categ_id) ? product.categ_id[1] : "-"} />
+          <DetailRow icon={Box} label="Type" value={
+            product.type === "consu" ? "Consumable" : product.type === "service" ? "Service" : product.type
+          } />
+          <DetailRow icon={Tag} label="Status" value={
+            <Badge variant={product.active ? "default" : "secondary"}>
+              {product.active ? "Active" : "Archived"}
+            </Badge>
+          } />
+          <DetailRow icon={Calendar} label="Created" value={new Date(product.create_date).toLocaleDateString()} />
+          <DetailRow icon={Calendar} label="Last Updated" value={new Date(product.write_date).toLocaleDateString()} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function OdooProducts() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [activeFilter, setActiveFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState<OdooProduct | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [jumpInput, setJumpInput] = useState("");
@@ -251,7 +346,9 @@ export default function OdooProducts() {
                 </TableHeader>
                 <TableBody>
                   {data.records.map((p) => (
-                    <TableRow key={p.id} data-testid={`row-product-${p.id}`}>
+                    <TableRow key={p.id} data-testid={`row-product-${p.id}`}
+                      className="cursor-pointer"
+                      onClick={() => setSelectedProduct(p)}>
                       <TableCell className="font-mono text-xs">
                         {p.default_code || "-"}
                       </TableCell>
@@ -338,6 +435,12 @@ export default function OdooProducts() {
           )}
         </CardContent>
       </Card>
+
+      <ProductDetailPanel
+        product={selectedProduct}
+        open={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   );
 }
