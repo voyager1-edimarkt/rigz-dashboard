@@ -239,14 +239,13 @@ export default function OdooProducts() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>SKU</TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[40%]">Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Sale Price</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">On Hand</TableHead>
                     <TableHead className="text-right">Reserved</TableHead>
                     <TableHead className="text-right">Available</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -256,7 +255,7 @@ export default function OdooProducts() {
                       <TableCell className="font-mono text-xs">
                         {p.default_code || "-"}
                       </TableCell>
-                      <TableCell className="font-medium max-w-[300px] truncate">
+                      <TableCell className="font-medium">
                         {p.description
                           ? <span dangerouslySetInnerHTML={{ __html: (p.description as string).replace(/<[^>]*>/g, '') }} />
                           : p.name}
@@ -288,11 +287,6 @@ export default function OdooProducts() {
                         }>
                           {p.available_qty}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {p.type === "consu" ? "consumable" : p.type === "service" ? "service" : p.type}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={p.active ? "default" : "secondary"}>
