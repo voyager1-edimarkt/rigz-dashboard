@@ -52,7 +52,21 @@ attached_assets/  - Uploaded images/assets
 - Build: `npm run build`
 - Production: `npm run start`
 
+## AWS VM Deployment
+- Deploy files in `deploy/` directory
+- `deploy/setup.sh` - Automated setup script (installs Node.js, PM2, Nginx)
+- `deploy/build-vm.sh` - Builds production bundle with MySQL auth (no PostgreSQL needed)
+- `deploy/ecosystem.config.cjs` - PM2 process manager config
+- `deploy/nginx.conf` - Nginx reverse proxy config
+- `deploy/.env.example` - Environment variable template
+- `deploy/DEPLOY-GUIDE.md` - Full deployment instructions
+- VM build uses direct MySQL connection (no SSH tunnel) and MySQL-based session store
+
 ## Recent Changes
+- 2026-02-19: Created AWS VM migration package (deploy/) with setup script, PM2, Nginx, MySQL auth
+- 2026-02-19: Added logout button to sidebar
+- 2026-02-19: Added "Powered By EDIMarkt Technologies" to sidebar footer
+- 2026-02-19: Updated favicon to RIGZ logo from gorigz.com
 - 2026-02-19: Added simple login system with PostgreSQL session store, bcryptjs password hashing, protected all API routes
 - 2026-02-19: Made dashboard KPI cards non-clickable (removed hover/navigate)
 - 2026-02-19: Initial setup in Replit environment, added nanoid dependency, set tsconfig target to ES2020
